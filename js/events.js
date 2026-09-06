@@ -60,6 +60,15 @@ export async function listOpenEvents(filters = {}) {
   if (filters.category) list = list.filter((e) => e.category === filters.category);
   if (filters.date) list = list.filter((e) => e.date === filters.date);
   if (filters.minPayment) list = list.filter((e) => e.paymentAmount >= Number(filters.minPayment));
+  if (filters.keyword) {
+    const kw = filters.keyword.toLowerCase();
+    list = list.filter((e) =>
+      (e.eventName || "").toLowerCase().includes(kw) ||
+      (e.brand || "").toLowerCase().includes(kw) ||
+      (e.category || "").toLowerCase().includes(kw) ||
+      (e.location || "").toLowerCase().includes(kw)
+    );
+  }
   return list;
 }
 

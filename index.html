@@ -35,6 +35,10 @@
           <a href="/auth/signup.html?role=company" class="btn btn-urgent btn-lg">🔥 Get Promoters Now</a>
           <a href="/auth/signup.html?role=promoter" class="btn btn-secondary btn-lg">Find A Gig</a>
         </div>
+        <form id="hero-search" class="search-bar mt-24" style="max-width:480px;">
+          <input type="text" id="hero-search-input" placeholder="🔍 Search events — e.g. Nike, Mumbai, Brand Activation..." />
+          <button type="submit" class="btn btn-secondary">Search</button>
+        </form>
         <p class="text-dim mt-16" style="font-size:13px;">Built by a Promoter, for a Promoter.</p>
       </div>
 
@@ -199,6 +203,12 @@
 <script type="module">
   import { mountLayout } from "/js/layout.js";
   mountLayout();
+
+  document.getElementById("hero-search").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = document.getElementById("hero-search-input").value.trim();
+    window.location.href = `/promoter/jobs.html${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+  });
 
   // Purely decorative animated demo tracker on the hero (not connected to Firestore).
   let secondsLeft = 43 * 60 + 27;

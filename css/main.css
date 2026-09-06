@@ -84,11 +84,22 @@ input, select, textarea { font-family: inherit; }
 .pc-nav-links a { font-size: 14px; color: var(--text-dim); font-weight: 500; transition: color .15s; }
 .pc-nav-links a:hover { color: var(--text); }
 .pc-nav-actions { display: flex; align-items: center; gap: 12px; }
-.pc-nav-toggle { display: none; background: none; border: none; color: var(--text); font-size: 22px; }
+.pc-nav-toggle { display: none; background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; line-height: 1; padding: 6px; }
+.pc-nav-mobile {
+  display: none; max-height: 0; overflow: hidden; transition: max-height .25s ease;
+  border-top: 1px solid transparent;
+}
+.pc-nav-mobile.open { max-height: 420px; border-top-color: var(--border); }
+.pc-nav-mobile-links { display: flex; flex-direction: column; padding: 16px 24px 20px; gap: 4px; }
+.pc-nav-mobile-links a { padding: 10px 0; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
 
 @media (max-width: 860px) {
   .pc-nav-links { display: none; }
   .pc-nav-toggle { display: block; }
+  .pc-nav-mobile { display: block; }
+  .pc-navbar-inner { flex-wrap: wrap; row-gap: 8px; }
+  .pc-nav-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .pc-nav-actions .btn-sm { padding: 8px 12px; font-size: 12px; }
 }
 
 /* ============ BUTTONS ============ */

@@ -32,6 +32,15 @@ export async function listPromoters(filters = {}) {
   if (filters.language) list = list.filter((p) => (p.languages || []).some((l) => l.toLowerCase().includes(filters.language.toLowerCase())));
   if (filters.verifiedOnly) list = list.filter((p) => p.verified);
   if (filters.availability) list = list.filter((p) => p.availability === filters.availability);
+  if (filters.keyword) {
+    const kw = filters.keyword.toLowerCase();
+    list = list.filter((p) =>
+      (p.fullName || "").toLowerCase().includes(kw) ||
+      (p.city || "").toLowerCase().includes(kw) ||
+      (p.skills || []).some((s) => s.toLowerCase().includes(kw)) ||
+      (p.brands || []).some((b) => b.toLowerCase().includes(kw))
+    );
+  }
   list.sort((a, b) => (b.ratingAvg || 0) - (a.ratingAvg || 0));
   return list;
 }
