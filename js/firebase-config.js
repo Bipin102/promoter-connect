@@ -17,10 +17,11 @@
  * Security Rules, not by hiding this file.
  */
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDwmVud5-zEgaT4Dkga51zGIrMb0PUm2-E",
+  authDomain: "promoter-connect.firebaseapp.com",
+  projectId: "promoter-connect",
+  storageBucket: "promoter-connect.firebasestorage.app",
+  messagingSenderId: "168774983956",
+  appId: "1:168774983956:web:8d8c757e869223bc062201",
+  measurementId: "G-4W8CYZ3PJD"
 };
