@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Seed Demo Data — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+</head>
+<body>
+<div class="page-shell" style="max-width:640px;margin:60px auto;">
+  <div class="card">
+    <h1 class="mb-8">🌱 Seed Demo Data</h1>
+    <p class="text-dim mb-24">
+      Populates Promoter Connect with realistic demo promoters, companies and events
+      (normal + urgent) so the platform looks alive while you test it. Demo docs are
+      prefixed <code>demo_</code> and are clearly marked. You must be logged in
+      (any role) to run this, and Firestore rules must allow writes to <code>demo_*</code> ids
+      (already configured in <code>/firestore.rules</code>).
+    </p>
+    <button class="btn btn-primary btn-lg btn-block" id="seed-btn">Run Seed</button>
+    <div id="log" class="mt-24" style="font-size:13px;font-family:monospace;white-space:pre-wrap;color:var(--text-dim);"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { db, serverTimestamp } from "/js/firebase-init.js";
+  import { doc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  await requireAuth();
+  const log = (msg) => { document.getElementById("log").textContent += msg + "\n"; };
+
+  document.getElementById("seed-btn").addEventListener("click", async () => {
+    document.getElementById("seed-btn").disabled = true;
+    document.getElementById("log").textContent = "";
+    try { await seed(); log("✅ Done! Browse /promoter/jobs.html or /company/find-promoters.html to see demo data."); }
+    catch (err) { log("❌ " + err.message); }
+    document.getElementById("seed-btn").disabled = false;
+  });
+
+  async function seed() {
+    const promoters = [
+      { id: "demo_p1", fullName: "Pihu Yadav", city: "Mumbai", gender: "Female", age: 24, height: "5'6\"", yearsExperience: 2, skills: ["Hosting","Brand Activation","Sampling"], languages: ["English","Hindi","Marathi"], brands: ["Nike","Nykaa"], categories: ["Brand Activation","Retail"], ratingAvg: 4.9, ratingCount: 28, eventsCompleted: 32, verified: true, quickResponder: true },
+      { id: "demo_p2", fullName: "Rohan Mehta", city: "Mumbai", gender: "Male", age: 27, height: "5'10\"", yearsExperience: 4, skills: ["Emceeing","Crowd Management"], languages: ["English","Hindi"], brands: ["Skoda","Tata"], categories: ["Exhibition","Auto Launch"], ratingAvg: 4.7, ratingCount: 51, eventsCompleted: 58, verified: true, quickResponder: true },
+      { id: "demo_p3", fullName: "Anaya Sharma", city: "Delhi", gender: "Female", age: 22, height: "5'5\"", yearsExperience: 1, skills: ["Sampling","Photography Assist"], languages: ["English","Hindi","Punjabi"], brands: ["Cadbury","Ferrero"], categories: ["Brand Activation"], ratingAvg: 4.5, ratingCount: 12, eventsCompleted: 14, verified: true, quickResponder: false },
+      { id: "demo_p4", fullName: "Kabir Singh", city: "Bengaluru", gender: "Male", age: 29, height: "5'11\"", yearsExperience: 5, skills: ["Hosting","Stage Management"], languages: ["English","Kannada","Hindi"], brands: ["Nykaa","Kay Beauty"], categories: ["Fashion Events"], ratingAvg: 4.8, ratingCount: 40, eventsCompleted: 62, verified: true, quickResponder: true },
+      { id: "demo_p5", fullName: "Meera Iyer", city: "Bengaluru", gender: "Female", age: 25, height: "5'4\"", yearsExperience: 2, skills: ["Brand Activation","Retail Promotion"], languages: ["English","Tamil"], brands: ["Ferrero"], categories: ["Retail"], ratingAvg: 4.6, ratingCount: 19, eventsCompleted: 21, verified: false, quickResponder: false },
+      { id: "demo_p6", fullName: "Aditya Kapoor", city: "Pune", gender: "Male", age: 23, height: "5'9\"", yearsExperience: 1, skills: ["Sampling","Crowd Engagement"], languages: ["English","Hindi","Marathi"], brands: ["Cadbury"], categories: ["Exhibition"], ratingAvg: 4.2, ratingCount: 6, eventsCompleted: 7, verified: false, quickResponder: true },
+      { id: "demo_p7", fullName: "Simran Kaur", city: "Delhi", gender: "Female", age: 26, height: "5'6\"", yearsExperience: 3, skills: ["Hosting","Modeling"], languages: ["English","Hindi","Punjabi"], brands: ["Nykaa","Kay Beauty","Nike"], categories: ["Fashion Events","Brand Activation"], ratingAvg: 5.0, ratingCount: 33, eventsCompleted: 51, verified: true, quickResponder: true },
+      { id: "demo_p8", fullName: "Vivaan Nair", city: "Mumbai", gender: "Male", age: 30, height: "6'0\"", yearsExperience: 6, skills: ["Stage Management","Emceeing","Brand Activation"], languages: ["English","Hindi","Malayalam"], brands: ["Tata","Skoda"], categories: ["Auto Launch","Exhibition"], ratingAvg: 4.9, ratingCount: 70, eventsCompleted: 88, verified: true, quickResponder: true },
+    ];
+
+    for (const p of promoters) {
+      await setDoc(doc(db, "promoters", p.id), {
+        uid: p.id, email: `${p.id}@demo.promoterconnect.site`, photoURL: "", availability: "available",
+        totalEarnings: 0, pendingEarnings: 0, isDemo: true,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...p,
+      });
+      log(`+ promoter: ${p.fullName}`);
+    }
+
+    const companies = [
+      { id: "demo_c1", companyName: "Nike India Activation Partner", industry: "Brand Activation Agency", location: "Mumbai", description: "Runs nationwide brand activations and pop-up experiences for Nike India.", ratingAvg: 4.8, ratingCount: 22, eventsPosted: 34, eventsCompleted: 30, verified: true },
+      { id: "demo_c2", companyName: "Cadbury Experiential", industry: "FMCG Sampling & Activation", location: "Delhi", description: "Manages sampling drives and experiential marketing for Cadbury.", ratingAvg: 4.6, ratingCount: 15, eventsPosted: 20, eventsCompleted: 18, verified: true },
+      { id: "demo_c3", companyName: "Skoda Motors Event Team", industry: "Automotive Exhibitions", location: "Pune", description: "Organizes showroom launches and auto expo staffing for Skoda.", ratingAvg: 4.4, ratingCount: 9, eventsPosted: 12, eventsCompleted: 10, verified: true },
+      { id: "demo_c4", companyName: "Nykaa x Kay Beauty Events", industry: "Beauty & Fashion", location: "Bengaluru", description: "Runs in-store beauty activations and fashion event staffing.", ratingAvg: 4.9, ratingCount: 27, eventsPosted: 25, eventsCompleted: 24, verified: true },
+      { id: "demo_c5", companyName: "Ferrero Rocher Promotions", industry: "FMCG Brand Activation", location: "Mumbai", description: "Festive season promotions and retail activation for Ferrero Rocher.", ratingAvg: 4.3, ratingCount: 8, eventsPosted: 10, eventsCompleted: 8, verified: false },
+    ];
+
+    for (const c of companies) {
+      await setDoc(doc(db, "companies", c.id), {
+        uid: c.id, email: `${c.id}@demo.promoterconnect.site`, logoURL: "", contact: "hello@example.com",
+        isDemo: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...c,
+      });
+      log(`+ company: ${c.companyName}`);
+    }
+
+    const now = Date.now();
+    const events = [
+      { id: "demo_e1", companyId: "demo_c2", eventName: "Cadbury Diwali Sampling Drive", brand: "Cadbury", category: "Brand Activation", location: "BKC, Mumbai", date: isoDate(2), startTime: "17:00", endTime: "22:00", positionsRequired: 5, positionsFilled: 2, paymentAmount: 1500, paymentType: "per_event", hiringType: "urgent", status: "open", urgentDeadlineMs: now + 43*60*1000 },
+      { id: "demo_e2", companyId: "demo_c1", eventName: "Nike Air Max Launch Activation", brand: "Nike", category: "Brand Activation", location: "Phoenix Marketcity, Mumbai", date: isoDate(5), startTime: "11:00", endTime: "20:00", positionsRequired: 10, positionsFilled: 10, paymentAmount: 1800, paymentType: "per_event", hiringType: "urgent", status: "fulfilled", urgentDeadlineMs: now - 5*60*1000, fulfilledAt: serverTimestamp() },
+      { id: "demo_e3", companyId: "demo_c3", eventName: "Skoda Kushaq Showroom Launch", brand: "Skoda", category: "Auto Launch", location: "Baner, Pune", date: isoDate(9), startTime: "10:00", endTime: "18:00", positionsRequired: 6, positionsFilled: 3, paymentAmount: 2000, paymentType: "per_day", hiringType: "normal", status: "open" },
+      { id: "demo_e4", companyId: "demo_c4", eventName: "Kay Beauty Fashion Week Pop-Up", brand: "Kay Beauty", category: "Fashion Events", location: "UB City, Bengaluru", date: isoDate(3), startTime: "16:00", endTime: "23:00", positionsRequired: 4, positionsFilled: 1, paymentAmount: 2200, paymentType: "per_event", hiringType: "urgent", status: "open", urgentDeadlineMs: now + 12*60*1000 },
+      { id: "demo_e5", companyId: "demo_c5", eventName: "Ferrero Rocher Festive Retail Push", brand: "Ferrero Rocher", category: "Retail", location: "Andheri, Mumbai", date: isoDate(7), startTime: "12:00", endTime: "20:00", positionsRequired: 8, positionsFilled: 5, paymentAmount: 1400, paymentType: "per_event", hiringType: "normal", status: "open" },
+      { id: "demo_e6", companyId: "demo_c2", eventName: "Cadbury College Fest Sampling", brand: "Cadbury", category: "Exhibition", location: "Pune University", date: isoDate(1), startTime: "09:00", endTime: "17:00", positionsRequired: 6, positionsFilled: 4, paymentAmount: 1200, paymentType: "per_event", hiringType: "urgent", status: "window_ended", urgentDeadlineMs: now - 30*60*1000 },
+      { id: "demo_e7", companyId: "demo_c1", eventName: "Nykaa Beauty Bar Retail Staffing", brand: "Nykaa", category: "Retail", location: "Select Citywalk, Delhi", date: isoDate(11), startTime: "10:00", endTime: "21:00", positionsRequired: 5, positionsFilled: 0, paymentAmount: 1600, paymentType: "per_event", hiringType: "normal", status: "open" },
+    ];
+
+    for (const e of events) {
+      const { id, ...data } = e;
+      await setDoc(doc(db, "events", id), {
+        genderReq: "", ageReq: "", experienceReq: "", skillsReq: [], dressCode: "Branded T-Shirt Provided",
+        description: "Demo listing seeded for showcasing Promoter Connect.", specialInstructions: "", contactPerson: "Event Coordinator",
+        urgentStartedAt: e.hiringType === "urgent" ? serverTimestamp() : null,
+        fulfilledAt: e.fulfilledAt || null, isDemo: true,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...data,
+      });
+      log(`+ event: ${e.eventName}`);
+    }
+
+    log("Seeding ratings...");
+    await setDoc(doc(db, "ratings", "demo_r1"), {
+      bookingId: "demo_b1", eventId: "demo_e2", fromId: "demo_c1", fromRole: "company", toId: "demo_p1", toRole: "promoter",
+      categories: { professionalism: 5, punctuality: 5, communication: 5, workQuality: 5 }, overall: 5,
+      comment: "Pihu was fantastic — punctual, professional and great with the crowd!", isDemo: true, createdAt: serverTimestamp(),
+    });
+
+    function isoDate(daysFromNow) {
+      const d = new Date(); d.setDate(d.getDate() + daysFromNow);
+      return d.toISOString().slice(0,10);
+    }
+  }
+</script>
+</body>
+</html>

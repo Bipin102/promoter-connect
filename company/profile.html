@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Company Profile — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="page-header"><h1>🏢 Company Profile</h1><p>Promoters see this before applying or accepting your gigs.</p></div>
+
+  <div class="two-col">
+    <div class="card">
+      <form id="profile-form">
+        <div class="field">
+          <label>Company Logo</label>
+          <div class="flex gap-16" style="align-items:center;">
+            <div class="avatar lg" id="logo-preview">?</div>
+            <input type="file" id="logo-input" accept="image/*" />
+          </div>
+        </div>
+        <div class="field"><label>Company Name</label><input type="text" id="companyName" required /></div>
+        <div class="field-row">
+          <div class="field"><label>Industry / Event Category</label><input type="text" id="industry" placeholder="e.g. Brand Activation Agency" /></div>
+          <div class="field"><label>Location</label><input type="text" id="location" required placeholder="e.g. Mumbai" /></div>
+        </div>
+        <div class="field"><label>Contact Information</label><input type="text" id="contact" placeholder="Phone / Email" /></div>
+        <div class="field"><label>Company Description</label><textarea id="description" rows="4" placeholder="What does your company do?"></textarea></div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="save-btn">Save Profile</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 class="mb-16">Reputation Preview</h3>
+      <div id="rep-preview" class="text-dim" style="font-size:14px;">Save your profile to see your public preview.</div>
+    </div>
+  </div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getCompany, updateCompany } from "/js/db.js";
+  import { uploadImage } from "/js/storage.js";
+  import { toast, stars, badgeList, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "company" });
+  const { user } = await requireAuth("company");
+  let company = await getCompany(user.uid);
+  fillForm(company);
+  renderReputation(company);
+
+  if (new URLSearchParams(location.search).get("onboarding")) {
+    toast("Welcome! Complete your company profile to start posting events.", "info", 5000);
+  }
+
+  function fillForm(c) {
+    document.getElementById("companyName").value = c.companyName || "";
+    document.getElementById("industry").value = c.industry || "";
+    document.getElementById("location").value = c.location || "";
+    document.getElementById("contact").value = c.contact || "";
+    document.getElementById("description").value = c.description || "";
+    const preview = document.getElementById("logo-preview");
+    preview.innerHTML = c.logoURL ? `<img src="${c.logoURL}" />` : (c.companyName || "?")[0].toUpperCase();
+  }
+
+  function renderReputation(c) {
+    document.getElementById("rep-preview").innerHTML = `
+      <h3 class="mb-8">${escapeHTML(c.companyName || "")}</h3>
+      <div class="mb-8">${stars(c.ratingAvg || 0, c.ratingCount || 0)}</div>
+      <p>📌 ${c.eventsPosted || 0} Events Posted</p>
+      <p>🎯 ${c.eventsCompleted || 0} Events Completed</p>
+      <div class="profile-badges">${badgeList(c, "company")}</div>
+    `;
+  }
+
+  document.getElementById("profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("save-btn");
+    btn.disabled = true; btn.textContent = "Saving...";
+    try {
+      const file = document.getElementById("logo-input").files[0];
+      let logoURL = company.logoURL || "";
+      if (file) logoURL = await uploadImage(`companies/${user.uid}/logo-${Date.now()}.jpg`, file);
+      const data = {
+        companyName: document.getElementById("companyName").value.trim(),
+        industry: document.getElementById("industry").value.trim(),
+        location: document.getElementById("location").value.trim(),
+        contact: document.getElementById("contact").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        logoURL,
+      };
+      await updateCompany(user.uid, data);
+      company = { ...company, ...data };
+      fillForm(company);
+      renderReputation(company);
+      toast("Profile saved.", "success");
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Save Profile";
+    }
+  });
+</script>
+</body>
+</html>

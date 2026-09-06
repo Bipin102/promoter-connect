@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Promoter Connect — Built by a Promoter, for a Promoter</title>
+<meta name="description" content="Promoter Connect helps event companies find and confirm promoters within 1 hour, with live event check-ins and two-way ratings." />
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+</head>
+<body>
+
+<div id="pc-navbar"></div>
+
+<!-- ============ HERO ============ -->
+<header class="section" style="padding-top:60px;padding-bottom:60px;position:relative;overflow:hidden;">
+  <div class="glow-blob" style="width:520px;height:520px;top:-180px;right:-160px;background:var(--pink);"></div>
+  <div class="glow-blob" style="width:420px;height:420px;bottom:-160px;left:-140px;background:var(--purple);"></div>
+  <div class="container" style="position:relative;z-index:1;">
+    <div style="display:flex;gap:50px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1;min-width:320px;">
+        <span class="badge badge-urgent" style="margin-bottom:18px;">⚡ EVENTS × PEOPLE SMART MATCHING</span>
+        <h1 style="font-size:clamp(32px,5vw,54px);line-height:1.08;margin-bottom:18px;">
+          NEED PROMOTERS URGENTLY?<br/>
+          <span class="text-gradient">GET THEM WITHIN 1 HOUR. ⚡</span>
+        </h1>
+        <p style="font-size:17px;color:var(--text-dim);max-width:520px;margin-bottom:30px;">
+          Promoter Connect helps event companies find, confirm and manage promoters faster through
+          real-time matching, professional profiles, live check-ins and trusted ratings.
+        </p>
+        <div class="flex gap-12" style="flex-wrap:wrap;">
+          <a href="/auth/signup.html?role=company" class="btn btn-urgent btn-lg">🔥 Get Promoters Now</a>
+          <a href="/auth/signup.html?role=promoter" class="btn btn-secondary btn-lg">Find A Gig</a>
+        </div>
+        <p class="text-dim mt-16" style="font-size:13px;">Built by a Promoter, for a Promoter.</p>
+      </div>
+
+      <div style="flex:1;min-width:320px;">
+        <div class="tracker" id="hero-tracker">
+          <div class="tracker-head">
+            <span class="tracker-title">⚡ FINDING YOUR PROMOTERS</span>
+            <span class="status-pill status-open">LIVE DEMO</span>
+          </div>
+          <p class="text-dim" style="font-size:13px;margin-bottom:4px;">Cadbury Brand Activation · BKC, Mumbai</p>
+          <div class="flex-between mt-16">
+            <span style="font-size:14px;color:var(--text-dim);">Promoters Required: <strong style="color:var(--text)">5</strong></span>
+            <span class="tracker-timer" id="hero-timer">43:27</span>
+          </div>
+          <div class="tracker-progress-track"><div class="tracker-progress-fill" id="hero-fill" style="width:20%;"></div></div>
+          <div class="tracker-counts">
+            <span id="hero-count">1 / 5 Confirmed</span>
+            <span class="text-dim" style="font-weight:500;">⏱️ Time Remaining</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ TARGET USERS STRIP ============ -->
+<section class="section" style="padding-top:0;padding-bottom:40px;">
+  <div class="container">
+    <div class="card-grid cols-2">
+      <div class="card">
+        <h3 style="margin-bottom:10px;">🎤 For Promoters</h3>
+        <p class="text-dim" style="font-size:14px;">Create a professional profile, discover genuine gigs, book urgent positions instantly, and build a visible, ratings-backed reputation.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:10px;">🏢 For Event Companies</h3>
+        <p class="text-dim" style="font-size:14px;">Post normal or urgent requirements, track confirmations live, verify arrival with live check-ins, and hire with confidence.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="section" id="how-it-works">
+  <div class="container">
+    <span class="section-tag">How It Works</span>
+    <h2 class="section-title">Post → Match → Confirm → Check-In → Complete → Rate</h2>
+    <p class="section-sub">A simple flow that turns a fragmented, WhatsApp-and-phone-call process into a structured digital workflow.</p>
+
+    <div class="card-grid cols-2">
+      <div class="card">
+        <h3 class="mb-16">For Event Companies</h3>
+        <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--text-dim);">
+          <li>Create your company profile</li>
+          <li>Post an event requirement</li>
+          <li>Choose Normal or 🔥 Urgent (1-Hour) hiring</li>
+          <li>Track confirmations in real time</li>
+          <li>View live check-ins as promoters arrive</li>
+          <li>Complete the event and rate promoters</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3 class="mb-16">For Promoters</h3>
+        <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--text-dim);">
+          <li>Create your professional profile</li>
+          <li>Discover normal & urgent gigs</li>
+          <li>Apply, or instantly book an urgent slot</li>
+          <li>Get your booking confirmation</li>
+          <li>Check in live with a photo at the venue</li>
+          <li>Complete the event and receive your rating</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY PROMOTER CONNECT ============ -->
+<section class="section" id="features" style="background:var(--bg-alt);">
+  <div class="container">
+    <span class="section-tag">Why Promoter Connect</span>
+    <h2 class="section-title" id="why">Designed around the way event hiring actually happens</h2>
+    <div class="card-grid mt-32">
+      <div class="card">
+        <div style="font-size:26px;margin-bottom:10px;">⚡</div>
+        <h3 class="mb-8">Promoters Within 1 Hour</h3>
+        <p class="text-dim" style="font-size:14px;">A real-time fulfillment workflow designed to find and confirm required promoters within 60 minutes — not just a job listing that expires.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:26px;margin-bottom:10px;">📍</div>
+        <h3 class="mb-8">Live Event Check-In</h3>
+        <p class="text-dim" style="font-size:14px;">Promoters submit live proof — a photo, timestamp and optional location — the moment they reach the venue.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:26px;margin-bottom:10px;">⭐</div>
+        <h3 class="mb-8">Trusted Profiles</h3>
+        <p class="text-dim" style="font-size:14px;">Professional profiles, completed-event counts, ratings and reviews build real credibility on both sides.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:26px;margin-bottom:10px;">🚀</div>
+        <h3 class="mb-8">Faster Hiring</h3>
+        <p class="text-dim" style="font-size:14px;">Post, track and manage promoter fulfillment from one dashboard instead of scattered calls and WhatsApp groups.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:26px;margin-bottom:10px;">🤝</div>
+        <h3 class="mb-8">Two-Way Reputation</h3>
+        <p class="text-dim" style="font-size:14px;">Both promoters and companies build trust through genuine post-event ratings — never fabricated badges.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:26px;margin-bottom:10px;">🔒</div>
+        <h3 class="mb-8">Verified & Secure</h3>
+        <p class="text-dim" style="font-size:14px;">Role-based accounts, atomic booking logic and Firebase security rules protect every transaction.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPARISON ============ -->
+<section class="section">
+  <div class="container">
+    <span class="section-tag">The Difference</span>
+    <h2 class="section-title">Traditional Hiring vs. Promoter Connect</h2>
+    <div class="card-grid cols-2 mt-32">
+      <div class="card" style="border-color:var(--border);">
+        <h3 class="mb-16" style="color:var(--text-dim);">Traditional Method</h3>
+        <div class="flow-steps" style="flex-direction:column;align-items:stretch;">
+          <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Search Scattered Contacts</div>
+          <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Call Multiple Promoters</div>
+          <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Wait For Replies</div>
+          <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Manual Coordination</div>
+          <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Uncertain Availability</div>
+          <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Late, Unconfirmed Hiring</div>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(255,46,147,0.4);">
+        <h3 class="mb-16 text-gradient">Promoter Connect</h3>
+        <div class="flow-steps" style="flex-direction:column;align-items:stretch;">
+          <div class="flow-step"><span class="dot" style="background:var(--pink);"></span>Post Requirement</div>
+          <div class="flow-step"><span class="dot" style="background:var(--pink);"></span>Instant Promoter Discovery</div>
+          <div class="flow-step"><span class="dot" style="background:var(--purple);"></span>Real-Time Responses</div>
+          <div class="flow-step"><span class="dot" style="background:var(--purple);"></span>Quick, Atomic Booking</div>
+          <div class="flow-step"><span class="dot" style="background:var(--green);"></span>Live Fulfillment Tracking</div>
+          <div class="flow-step" style="border-color:var(--pink);"><span class="dot" style="background:var(--green);"></span>⚡ Confirmed Within 1 Hour</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="section" style="background:var(--bg-alt);">
+  <div class="container text-center">
+    <h2 class="section-title">From fragmented opportunities to one connected platform.</h2>
+    <p class="section-sub" style="margin-left:auto;margin-right:auto;">Make event-work opportunities easier to discover, manage and trust.</p>
+    <div class="flex gap-12 flex-center" style="flex-wrap:wrap;">
+      <a href="/auth/signup.html?role=company" class="btn btn-urgent btn-lg">🔥 Get Promoters Within 1 Hour</a>
+      <a href="/auth/signup.html?role=promoter" class="btn btn-secondary btn-lg">Join As A Promoter</a>
+    </div>
+  </div>
+</section>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { mountLayout } from "/js/layout.js";
+  mountLayout();
+
+  // Purely decorative animated demo tracker on the hero (not connected to Firestore).
+  let secondsLeft = 43 * 60 + 27;
+  let confirmed = 1;
+  const total = 5;
+  setInterval(() => {
+    secondsLeft = Math.max(0, secondsLeft - 1);
+    const m = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+    const s = String(secondsLeft % 60).padStart(2, "0");
+    document.getElementById("hero-timer").textContent = `${m}:${s}`;
+    if (secondsLeft % 240 === 0 && confirmed < total) {
+      confirmed++;
+      document.getElementById("hero-count").textContent = `${confirmed} / ${total} Confirmed`;
+      document.getElementById("hero-fill").style.width = `${(confirmed / total) * 100}%`;
+    }
+  }, 1000);
+</script>
+</body>
+</html>

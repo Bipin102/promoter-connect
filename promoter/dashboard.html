@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="dash-header">
+    <div class="dash-greeting">
+      <h1 id="greeting">Hey 👋</h1>
+      <p>Ready for your next event?</p>
+    </div>
+    <div class="dash-quick-actions">
+      <a href="/promoter/jobs.html" class="btn btn-urgent">🔥 See Urgent Jobs</a>
+      <a href="/promoter/profile.html" class="btn btn-secondary">👤 Edit Profile</a>
+    </div>
+  </div>
+
+  <div class="card-grid cols-4 mb-24" id="stats"></div>
+
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h2>🔥 Urgent Jobs Near You</h2>
+      <a href="/promoter/jobs.html">See all →</a>
+    </div>
+    <div class="card-grid cols-2" id="urgent-jobs"></div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h2>📅 Upcoming Events</h2>
+      <a href="/promoter/bookings.html">See all →</a>
+    </div>
+    <div id="upcoming"></div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h2>⭐ My Ratings</h2>
+      <a href="/promoter/ratings.html">See all →</a>
+    </div>
+    <div class="card" id="ratings-preview"></div>
+  </div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getPromoter } from "/js/db.js";
+  import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
+  import { listPromoterBookings } from "/js/booking.js";
+  import { listRatingsFor } from "/js/ratings.js";
+  import { jobCardHTML, tickCountdowns } from "/js/render.js";
+  import { stars, fmtDate, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "promoter" });
+  const { user } = await requireAuth("promoter");
+  const promoter = await getPromoter(user.uid);
+
+  document.getElementById("greeting").textContent = `Hey ${promoter.fullName?.split(" ")[0] || "there"} 👋`;
+
+  const [allEvents, bookings, ratings] = await Promise.all([
+    listOpenEvents(), listPromoterBookings(user.uid), listRatingsFor(user.uid),
+  ]);
+  const reconciled = await Promise.all(allEvents.map(reconcileUrgentWindow));
+  const urgent = reconciled.filter((e) => e.hiringType === "urgent" && e.status === "open");
+
+  const upcoming = bookings.filter((b) => ["booked", "on_the_way", "checked_in", "active"].includes(b.status));
+  const completed = bookings.filter((b) => b.status === "completed");
+  const totalEarnings = completed.reduce((sum, b) => sum + (b.paymentAmount || 0), 0);
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat-tile"><div class="stat-icon">📅</div><div class="stat-value">${upcoming.length}</div><div class="stat-label">Upcoming Events</div></div>
+    <div class="stat-tile"><div class="stat-icon">🎯</div><div class="stat-value">${promoter.eventsCompleted || 0}</div><div class="stat-label">Completed Events</div></div>
+    <div class="stat-tile"><div class="stat-icon">⭐</div><div class="stat-value">${(promoter.ratingAvg || 0).toFixed(1)}</div><div class="stat-label">Average Rating</div></div>
+    <div class="stat-tile"><div class="stat-icon">💰</div><div class="stat-value">₹${totalEarnings.toLocaleString("en-IN")}</div><div class="stat-label">Total Earnings</div></div>
+  `;
+
+  const urgentHost = document.getElementById("urgent-jobs");
+  urgentHost.innerHTML = urgent.length
+    ? urgent.slice(0, 4).map((e) => jobCardHTML(e, { showActions: false })).join("")
+    : `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">⚡</div>No urgent requirements right now — check back soon.</div>`;
+  urgentHost.querySelectorAll(".job-card").forEach((el) => el.addEventListener("click", () => location.href = "/promoter/jobs.html"));
+  tickCountdowns(urgentHost);
+  setInterval(() => tickCountdowns(urgentHost), 1000);
+
+  document.getElementById("upcoming").innerHTML = upcoming.length
+    ? upcoming.slice(0, 4).map((b) => `
+      <a href="/promoter/event.html?id=${b.id}" class="promoter-row mb-16" style="justify-content:space-between;">
+        <div class="flex gap-16" style="align-items:center;">
+          <div class="avatar">${(b.eventName || "?")[0]}</div>
+          <div>
+            <strong>${escapeHTML(b.eventName)}</strong>
+            <p class="text-dim" style="font-size:12px;">📍 ${escapeHTML(b.location)} · 📅 ${fmtDate(b.date)}</p>
+          </div>
+        </div>
+        <span class="status-pill status-${b.status}">${b.status.replace("_", " ").toUpperCase()}</span>
+      </a>`).join("")
+    : `<div class="empty-state"><div class="empty-state-icon">📅</div>No upcoming events yet. <a href="/promoter/jobs.html" style="color:var(--pink-soft)">Discover gigs →</a></div>`;
+
+  document.getElementById("ratings-preview").innerHTML = ratings.length
+    ? `<div class="mb-16">${stars(promoter.ratingAvg || 0, promoter.ratingCount || 0)}</div>` +
+      ratings.slice(0, 2).map((r) => `<p class="text-dim mb-8" style="font-size:13px;">"${escapeHTML(r.comment || "No comment left.")}" — ${r.overall.toFixed(1)}★</p>`).join("")
+    : `<p class="text-dim">No ratings yet — complete your first event to start building your reputation.</p>`;
+</script>
+</body>
+</html>

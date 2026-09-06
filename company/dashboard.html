@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="dash-header">
+    <div class="dash-greeting">
+      <h1 id="greeting">Hey 👋</h1>
+      <p>Here's what's happening with your events.</p>
+    </div>
+    <div class="dash-quick-actions">
+      <a href="/company/post-event.html" class="btn btn-secondary">➕ Post New Event</a>
+      <a href="/company/post-event.html#urgent" class="btn btn-urgent" id="urgent-cta">🔥 Get Promoters Within 1 Hour</a>
+      <a href="/company/find-promoters.html" class="btn btn-secondary">👥 Find Promoters</a>
+      <a href="/company/manage-events.html" class="btn btn-secondary">📊 Manage Events</a>
+    </div>
+  </div>
+
+  <div class="card-grid cols-4 mb-24" id="stats"></div>
+
+  <div class="dash-section">
+    <div class="dash-section-head"><h2>🔥 Active 1-Hour Fulfillment Requests</h2></div>
+    <div id="urgent-trackers"></div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h2>📅 Upcoming Events</h2>
+      <a href="/company/manage-events.html">See all →</a>
+    </div>
+    <div id="upcoming"></div>
+  </div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getCompany } from "/js/db.js";
+  import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
+  import { fmtDate, fmtCountdown, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "company" });
+  const { user } = await requireAuth("company");
+  const company = await getCompany(user.uid);
+  document.getElementById("greeting").textContent = `Hey ${company.companyName?.split(" ")[0] || "there"} 👋`;
+
+  let events = await listCompanyEvents(user.uid);
+  events = await Promise.all(events.map(reconcileUrgentWindow));
+
+  const activeEvents = events.filter((e) => !["completed","cancelled"].includes(e.status));
+  const urgentActive = events.filter((e) => e.hiringType === "urgent" && e.status === "open");
+  const confirmedTotal = events.reduce((sum, e) => sum + (e.positionsFilled || 0), 0);
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat-tile"><div class="stat-icon">📌</div><div class="stat-value">${activeEvents.length}</div><div class="stat-label">Active Events</div></div>
+    <div class="stat-tile"><div class="stat-icon">👥</div><div class="stat-value">${confirmedTotal}</div><div class="stat-label">Promoters Confirmed</div></div>
+    <div class="stat-tile"><div class="stat-icon">🔥</div><div class="stat-value">${urgentActive.length}</div><div class="stat-label">Active Urgent Requests</div></div>
+    <div class="stat-tile"><div class="stat-icon">⭐</div><div class="stat-value">${(company.ratingAvg||0).toFixed(1)}</div><div class="stat-label">Company Rating</div></div>
+  `;
+
+  const trackerHost = document.getElementById("urgent-trackers");
+  trackerHost.innerHTML = urgentActive.length
+    ? urgentActive.map((e) => `
+      <a href="/company/event.html?id=${e.id}" class="tracker mb-16" style="display:block;">
+        <div class="tracker-head">
+          <span class="tracker-title">🔥 ${escapeHTML(e.eventName)}</span>
+          <span class="tracker-timer" data-deadline="${e.urgentDeadlineMs}">--:--</span>
+        </div>
+        <div class="tracker-progress-track"><div class="tracker-progress-fill" style="width:${((e.positionsFilled||0)/e.positionsRequired)*100}%;"></div></div>
+        <div class="tracker-counts"><span>${e.positionsFilled||0}/${e.positionsRequired} Confirmed</span><span class="text-dim" style="font-weight:500;">View details →</span></div>
+      </a>`).join("")
+    : `<div class="empty-state"><div class="empty-state-icon">⚡</div>No active urgent requirements. <a href="/company/post-event.html" style="color:var(--pink-soft)">Post one now →</a></div>`;
+
+  function tickTrackers() {
+    trackerHost.querySelectorAll("[data-deadline]").forEach((el) => {
+      const ms = Number(el.dataset.deadline) - Date.now();
+      el.textContent = fmtCountdown(Math.max(0, ms));
+      el.classList.toggle("ending", ms < 5*60*1000);
+    });
+  }
+  tickTrackers();
+  setInterval(tickTrackers, 1000);
+
+  const upcoming = events.filter((e) => e.status === "open" || e.status === "fulfilled");
+  document.getElementById("upcoming").innerHTML = upcoming.length
+    ? upcoming.slice(0,5).map((e) => `
+      <a href="/company/event.html?id=${e.id}" class="promoter-row mb-16" style="justify-content:space-between;">
+        <div class="flex gap-16" style="align-items:center;">
+          <div class="avatar">${(e.eventName||"?")[0]}</div>
+          <div><strong>${escapeHTML(e.eventName)}</strong><p class="text-dim" style="font-size:12px;">📍 ${escapeHTML(e.location)} · 📅 ${fmtDate(e.date)}</p></div>
+        </div>
+        <span class="status-pill status-${e.status}">${e.status.toUpperCase()}</span>
+      </a>`).join("")
+    : `<div class="empty-state"><div class="empty-state-icon">📅</div>No upcoming events yet.</div>`;
+</script>
+</body>
+</html>

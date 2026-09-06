@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign Up — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+</head>
+<body>
+<div class="auth-shell">
+  <div class="auth-card">
+    <a href="/index.html" class="pc-logo"><span class="pc-logo-mark">PC</span> Promoter Connect</a>
+    <h1 class="auth-title mt-16">Create your account</h1>
+    <p class="auth-sub">Built by a Promoter, for a Promoter.</p>
+
+    <div class="auth-error" id="err"></div>
+
+    <form id="signup-form">
+      <div class="field">
+        <label>I am a...</label>
+        <div class="radio-card-group">
+          <label class="radio-card" data-role="promoter">
+            <input type="radio" name="role" value="promoter" />
+            <h4>🎤 Promoter</h4>
+            <p>Discover gigs, book urgent positions, build your reputation.</p>
+          </label>
+          <label class="radio-card" data-role="company">
+            <input type="radio" name="role" value="company" />
+            <h4>🏢 Event Company</h4>
+            <p>Post events and get promoters confirmed within 1 hour.</p>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="name-label">Full Name</label>
+        <input type="text" id="name" required placeholder="Your name" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" required placeholder="you@example.com" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="password" required minlength="6" placeholder="Min. 6 characters" />
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" id="confirm" required minlength="6" placeholder="Repeat password" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create Account</button>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="/auth/login.html">Log in</a></p>
+  </div>
+</div>
+
+<script type="module">
+  import { signup } from "/js/auth.js";
+
+  const params = new URLSearchParams(location.search);
+  const preselect = params.get("role");
+
+  const cards = document.querySelectorAll(".radio-card");
+  cards.forEach((card) => {
+    card.addEventListener("click", () => {
+      cards.forEach((c) => c.classList.remove("selected"));
+      card.classList.add("selected");
+      card.querySelector("input").checked = true;
+      document.getElementById("name-label").textContent =
+        card.dataset.role === "company" ? "Company Name" : "Full Name";
+    });
+  });
+  if (preselect === "promoter" || preselect === "company") {
+    document.querySelector(`.radio-card[data-role="${preselect}"]`)?.click();
+  }
+
+  const errBox = document.getElementById("err");
+  function showError(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
+
+  document.getElementById("signup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errBox.classList.remove("show");
+    const role = document.querySelector('input[name="role"]:checked')?.value;
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const confirm = document.getElementById("confirm").value;
+
+    if (!role) return showError("Please select whether you're a Promoter or an Event Company.");
+    if (password !== confirm) return showError("Passwords do not match.");
+
+    const btn = document.getElementById("submit-btn");
+    btn.disabled = true; btn.textContent = "Creating account...";
+    try {
+      await signup({ email, password, role, name });
+      window.location.href = role === "company" ? "/company/profile.html?onboarding=1" : "/promoter/profile.html?onboarding=1";
+    } catch (err) {
+      showError(mapAuthError(err));
+      btn.disabled = false; btn.textContent = "Create Account";
+    }
+  });
+
+  function mapAuthError(err) {
+    const code = err.code || "";
+    if (code.includes("email-already-in-use")) return "An account with this email already exists.";
+    if (code.includes("weak-password")) return "Password is too weak — use at least 6 characters.";
+    if (code.includes("invalid-email")) return "Please enter a valid email address.";
+    return err.message || "Something went wrong. Please try again.";
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Promoter Profile — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell" id="content"><div class="loading-state"><div class="spinner"></div></div></div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getPromoter, listPortfolio } from "/js/db.js";
+  import { listRatingsFor } from "/js/ratings.js";
+  import { stars, badgeList, escapeHTML } from "/js/ui.js";
+
+  const { profile } = await requireAuth();
+  mountLayout({ role: profile.role });
+
+  const id = new URLSearchParams(location.search).get("id");
+  const content = document.getElementById("content");
+  if (!id) { content.innerHTML = `<div class="empty-state">Promoter not found.</div>`; throw new Error("no id"); }
+
+  const [promoter, portfolio, ratings] = await Promise.all([getPromoter(id), listPortfolio(id), listRatingsFor(id)]);
+  if (!promoter) { content.innerHTML = `<div class="empty-state">Promoter not found.</div>`; throw new Error("not found"); }
+
+  content.innerHTML = `
+    <div class="profile-hero">
+      <div class="avatar xl">${promoter.photoURL ? `<img src="${promoter.photoURL}" />` : (promoter.fullName||"?")[0].toUpperCase()}</div>
+      <div class="profile-hero-info">
+        <h1>${escapeHTML(promoter.fullName || "Promoter")}</h1>
+        <div>${stars(promoter.ratingAvg||0, promoter.ratingCount||0)}</div>
+        <div class="profile-hero-meta">
+          <span>🎯 ${promoter.eventsCompleted||0} Events Completed</span>
+          <span>💬 ${promoter.ratingCount||0} Reviews</span>
+          <span>🏆 ${promoter.yearsExperience||0} Years Experience</span>
+          <span>📍 ${escapeHTML(promoter.city || "—")}</span>
+        </div>
+        <div class="profile-badges">${badgeList(promoter, "promoter")}</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="card mb-24">
+          <h3 class="mb-16">About</h3>
+          <div style="font-size:14px;line-height:2;">
+            <div>Age: ${promoter.age || "—"} &nbsp; Gender: ${escapeHTML(promoter.gender || "—")} &nbsp; Height: ${escapeHTML(promoter.height || "—")}</div>
+            <div>Availability: <span class="status-pill ${promoter.availability === "available" ? "status-fulfilled" : "status-pending"}">${(promoter.availability||"available").toUpperCase()}</span></div>
+          </div>
+          ${tagBlock("Skills", promoter.skills)}
+          ${tagBlock("Languages", promoter.languages)}
+          ${tagBlock("Previous Brands", promoter.brands)}
+          ${tagBlock("Event Categories", promoter.categories)}
+        </div>
+
+        <div class="card mb-24">
+          <h3 class="mb-16">Portfolio</h3>
+          ${portfolio.length ? `<div class="gallery-grid">${portfolio.map((p) => `<img src="${p.url}" />`).join("")}</div>` : `<p class="text-dim">No portfolio photos yet.</p>`}
+        </div>
+
+        <div class="card">
+          <h3 class="mb-16">Reviews</h3>
+          ${ratings.length ? ratings.slice(0,10).map((r) => `
+            <div class="mb-16" style="border-bottom:1px solid var(--border);padding-bottom:12px;">
+              <strong>${r.overall.toFixed(1)} ★</strong>
+              <p class="text-dim" style="font-size:13px;">${escapeHTML(r.comment || "No written comment.")}</p>
+            </div>`).join("") : `<p class="text-dim">No reviews yet.</p>`}
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="mb-16">Snapshot</h3>
+        <p style="font-size:14px;line-height:2;">
+          ⭐ ${(promoter.ratingAvg||0).toFixed(1)} Average Rating<br/>
+          🎯 ${promoter.eventsCompleted||0} Events Completed<br/>
+          💬 ${promoter.ratingCount||0} Reviews<br/>
+          🏆 ${promoter.yearsExperience||0} Years Experience<br/>
+          📍 ${escapeHTML(promoter.city || "—")}<br/>
+          ${promoter.verified ? "✓ Verified Profile" : "Not yet verified"}
+        </p>
+      </div>
+    </div>
+  `;
+
+  function tagBlock(label, items) {
+    if (!items || !items.length) return "";
+    return `<div class="mt-16"><label style="font-size:12px;color:var(--text-dim);font-weight:600;">${label}</label>
+      <div class="flex gap-8 mt-8" style="flex-wrap:wrap;">${items.map((i) => `<span class="badge badge-events">${escapeHTML(i)}</span>`).join("")}</div></div>`;
+  }
+</script>
+</body>
+</html>

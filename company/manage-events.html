@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manage Events — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="page-header flex-between">
+    <div><h1>📊 Manage Events</h1><p>All your posted requirements in one place.</p></div>
+    <a href="/company/post-event.html" class="btn btn-primary">➕ Post New Event</a>
+  </div>
+
+  <div class="pc-tabs">
+    <div class="pc-tab active" data-tab="all">All</div>
+    <div class="pc-tab" data-tab="open">Open</div>
+    <div class="pc-tab" data-tab="fulfilled">Fulfilled</div>
+    <div class="pc-tab" data-tab="completed">Completed</div>
+    <div class="pc-tab" data-tab="cancelled">Cancelled / Ended</div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
+  import { fmtDate, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "company" });
+  const { user } = await requireAuth("company");
+  let events = await listCompanyEvents(user.uid);
+  events = await Promise.all(events.map(reconcileUrgentWindow));
+
+  function render(tab) {
+    let items = events;
+    if (tab === "cancelled") items = events.filter((e) => ["cancelled","window_ended"].includes(e.status));
+    else if (tab !== "all") items = events.filter((e) => e.status === tab);
+
+    document.getElementById("list").innerHTML = items.length
+      ? items.map((e) => `
+        <a href="/company/event.html?id=${e.id}" class="promoter-row mb-16" style="justify-content:space-between;">
+          <div class="flex gap-16" style="align-items:center;">
+            <div class="avatar">${(e.eventName||"?")[0]}</div>
+            <div>
+              <strong>${escapeHTML(e.eventName)}</strong> ${e.hiringType === "urgent" ? `<span class="badge badge-urgent">🔥 URGENT</span>` : ""}
+              <p class="text-dim" style="font-size:12px;">📍 ${escapeHTML(e.location)} · 📅 ${fmtDate(e.date)}</p>
+            </div>
+          </div>
+          <div class="text-center">
+            <span class="status-pill status-${e.status}">${e.status.replace("_"," ").toUpperCase()}</span>
+            <div class="text-dim mt-8" style="font-size:13px;">${e.positionsFilled || 0}/${e.positionsRequired} Confirmed</div>
+          </div>
+        </a>`).join("")
+      : `<div class="empty-state"><div class="empty-state-icon">📭</div>No events here.</div>`;
+  }
+
+  document.querySelectorAll(".pc-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".pc-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      render(tab.dataset.tab);
+    });
+  });
+  render("all");
+</script>
+</body>
+</html>

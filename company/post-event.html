@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Post Event — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell" style="max-width:760px;">
+  <div class="page-header"><h1>➕ Post New Event</h1><p>Fill in the requirement details below.</p></div>
+
+  <div class="card mb-24">
+    <label class="mb-8" style="font-size:13px;font-weight:600;color:var(--text-dim);display:block;">Hiring Type</label>
+    <div class="radio-card-group">
+      <label class="radio-card selected" data-type="normal">
+        <input type="radio" name="hiringType" value="normal" checked />
+        <h4>Normal Hiring</h4>
+        <p>Promoters apply, you review and accept.</p>
+      </label>
+      <label class="radio-card urgent" data-type="urgent">
+        <input type="radio" name="hiringType" value="urgent" />
+        <h4>🔥 Urgent — Get Promoters Within 1 Hour</h4>
+        <p>Promoters instantly book open positions. Live fulfillment tracker starts the moment you post.</p>
+      </label>
+    </div>
+  </div>
+
+  <form id="event-form" class="card">
+    <div class="field-row">
+      <div class="field"><label>Event Name</label><input type="text" id="eventName" required placeholder="e.g. Nike Brand Activation" /></div>
+      <div class="field"><label>Brand / Client Name</label><input type="text" id="brand" placeholder="e.g. Nike" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Event Category</label><input type="text" id="category" placeholder="e.g. Brand Activation" /></div>
+      <div class="field"><label>Location</label><input type="text" id="location" required placeholder="e.g. BKC, Mumbai" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Event Date</label><input type="date" id="date" required /></div>
+      <div class="field"><label>Promoters Required</label><input type="number" id="positionsRequired" min="1" value="1" required /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Start Time</label><input type="time" id="startTime" required /></div>
+      <div class="field"><label>End Time</label><input type="time" id="endTime" required /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Gender Requirement (optional)</label>
+        <select id="genderReq"><option value="">Any</option><option>Female</option><option>Male</option></select>
+      </div>
+      <div class="field"><label>Age Requirement (optional)</label><input type="text" id="ageReq" placeholder="e.g. 20-30" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Experience Requirement</label><input type="text" id="experienceReq" placeholder="e.g. 1+ years" /></div>
+      <div class="field"><label>Dress Code</label><input type="text" id="dressCode" placeholder="e.g. Formal Black" /></div>
+    </div>
+    <div class="field"><label>Required Skills (comma-separated)</label><input type="text" id="skillsReq" placeholder="Hosting, Sampling" /></div>
+    <div class="field"><label>Job Description</label><textarea id="description" rows="4" placeholder="Describe the role..."></textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Payment Amount (₹)</label><input type="number" id="paymentAmount" min="0" required /></div>
+      <div class="field"><label>Payment Type</label>
+        <select id="paymentType"><option value="per_event">Per Event</option><option value="per_hour">Per Hour</option><option value="per_day">Per Day</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Special Instructions</label><textarea id="specialInstructions" rows="2"></textarea></div>
+    <div class="field"><label>Contact Person</label><input type="text" id="contactPerson" placeholder="Name / phone for on-ground coordination" /></div>
+
+    <button type="submit" class="btn btn-lg btn-block" id="submit-btn">Post Event</button>
+  </form>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { postEvent } from "/js/events.js";
+  import { updateCompany, getCompany } from "/js/db.js";
+  import { toast } from "/js/ui.js";
+
+  mountLayout({ role: "company" });
+  const { user } = await requireAuth("company");
+
+  let hiringType = "normal";
+  document.querySelectorAll(".radio-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".radio-card").forEach((c) => c.classList.remove("selected"));
+      card.classList.add("selected");
+      card.querySelector("input").checked = true;
+      hiringType = card.dataset.type;
+      document.getElementById("submit-btn").className = hiringType === "urgent" ? "btn btn-urgent btn-lg btn-block" : "btn btn-primary btn-lg btn-block";
+      document.getElementById("submit-btn").textContent = hiringType === "urgent" ? "🔥 Post & Start 1-Hour Fulfillment" : "Post Event";
+    });
+  });
+  document.querySelector(`.radio-card[data-type="${location.hash === "#urgent" ? "urgent" : "normal"}"]`).click();
+
+  document.getElementById("event-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("submit-btn");
+    btn.disabled = true; btn.textContent = "Posting...";
+    try {
+      const data = {
+        eventName: document.getElementById("eventName").value.trim(),
+        brand: document.getElementById("brand").value.trim(),
+        category: document.getElementById("category").value.trim(),
+        location: document.getElementById("location").value.trim(),
+        date: document.getElementById("date").value,
+        startTime: document.getElementById("startTime").value,
+        endTime: document.getElementById("endTime").value,
+        positionsRequired: document.getElementById("positionsRequired").value,
+        genderReq: document.getElementById("genderReq").value,
+        ageReq: document.getElementById("ageReq").value.trim(),
+        experienceReq: document.getElementById("experienceReq").value.trim(),
+        skillsReq: document.getElementById("skillsReq").value.split(",").map((s)=>s.trim()).filter(Boolean),
+        dressCode: document.getElementById("dressCode").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        paymentAmount: document.getElementById("paymentAmount").value,
+        paymentType: document.getElementById("paymentType").value,
+        specialInstructions: document.getElementById("specialInstructions").value.trim(),
+        contactPerson: document.getElementById("contactPerson").value.trim(),
+        hiringType,
+      };
+      const eventId = await postEvent(user.uid, data);
+      const company = await getCompany(user.uid);
+      await updateCompany(user.uid, { eventsPosted: (company.eventsPosted || 0) + 1 });
+      toast(hiringType === "urgent" ? "Urgent requirement posted! 1-hour fulfillment tracker started." : "Event posted!", "success");
+      window.location.href = `/company/event.html?id=${eventId}`;
+    } catch (err) {
+      toast(err.message, "error");
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Log In — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+</head>
+<body>
+<div class="auth-shell">
+  <div class="auth-card">
+    <a href="/index.html" class="pc-logo"><span class="pc-logo-mark">PC</span> Promoter Connect</a>
+    <h1 class="auth-title mt-16">Welcome back</h1>
+    <p class="auth-sub">Log in to your dashboard.</p>
+
+    <div class="auth-error" id="err"></div>
+
+    <form id="login-form">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" required placeholder="you@example.com" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" required placeholder="Your password" />
+      </div>
+      <div class="flex-between mb-16">
+        <span></span>
+        <a href="#" id="forgot-link" style="font-size:13px;color:var(--pink-soft);font-weight:600;">Forgot password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Log In</button>
+    </form>
+
+    <p class="auth-switch">New to Promoter Connect? <a href="/auth/signup.html">Create an account</a></p>
+  </div>
+</div>
+
+<script type="module">
+  import { login, resetPassword, getUserDoc } from "/js/auth.js";
+  import { toast } from "/js/ui.js";
+
+  const errBox = document.getElementById("err");
+  function showError(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
+
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errBox.classList.remove("show");
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const btn = document.getElementById("submit-btn");
+    btn.disabled = true; btn.textContent = "Logging in...";
+    try {
+      const user = await login(email, password);
+      const profile = await getUserDoc(user.uid);
+      window.location.href = profile?.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
+    } catch (err) {
+      showError(mapAuthError(err));
+      btn.disabled = false; btn.textContent = "Log In";
+    }
+  });
+
+  document.getElementById("forgot-link").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    if (!email) return showError("Enter your email above first, then click 'Forgot password?' again.");
+    try {
+      await resetPassword(email);
+      toast("Password reset email sent. Check your inbox.", "success");
+    } catch (err) {
+      showError(mapAuthError(err));
+    }
+  });
+
+  function mapAuthError(err) {
+    const code = err.code || "";
+    if (code.includes("user-not-found") || code.includes("invalid-credential")) return "No account found with these credentials.";
+    if (code.includes("wrong-password")) return "Incorrect password.";
+    if (code.includes("invalid-email")) return "Please enter a valid email address.";
+    if (code.includes("too-many-requests")) return "Too many attempts. Please try again later.";
+    return err.message || "Something went wrong. Please try again.";
+  }
+</script>
+</body>
+</html>

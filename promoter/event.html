@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Event Details — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell" style="max-width:760px;">
+  <div id="content"><div class="loading-state"><div class="spinner"></div></div></div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getBooking, updateBookingStatus, cancelBooking } from "/js/booking.js";
+  import { submitCheckIn, listCheckInsForBooking } from "/js/checkin.js";
+  import { hasRated, submitRating, categoriesFor } from "/js/ratings.js";
+  import { toast, confirmDialog, fmtDate, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "promoter" });
+  const { user } = await requireAuth("promoter");
+  const bookingId = new URLSearchParams(location.search).get("id");
+  const content = document.getElementById("content");
+
+  if (!bookingId) { content.innerHTML = `<div class="empty-state">Booking not found.</div>`; throw new Error("no id"); }
+
+  async function render() {
+    const booking = await getBooking(bookingId);
+    if (!booking || booking.promoterId !== user.uid) {
+      content.innerHTML = `<div class="empty-state">Booking not found.</div>`; return;
+    }
+    const checkIns = await listCheckInsForBooking(bookingId);
+    const alreadyRated = booking.status === "completed" ? await hasRated(bookingId, "promoter") : false;
+
+    content.innerHTML = `
+      <div class="card mb-24">
+        <div class="flex-between mb-16">
+          <div>
+            <h1 style="font-size:22px;">${escapeHTML(booking.eventName)}</h1>
+            <p class="text-dim">${escapeHTML(booking.brand || "")}</p>
+          </div>
+          <span class="status-pill status-${booking.status}">${booking.status.replace("_"," ").toUpperCase()}</span>
+        </div>
+        <div style="font-size:14px;line-height:2;">
+          <div>📅 ${fmtDate(booking.date)} &nbsp; 🕐 ${booking.startTime}–${booking.endTime}</div>
+          <div>📍 ${escapeHTML(booking.location)}</div>
+          <div>💰 ₹${Number(booking.paymentAmount||0).toLocaleString("en-IN")} · <span class="status-pill status-${booking.paymentStatus}">${booking.paymentStatus.toUpperCase()}</span></div>
+          <div>🎟️ Booking ID: ${booking.bookingCode}</div>
+        </div>
+        <div class="flex gap-12 mt-24" style="flex-wrap:wrap;">
+          ${booking.status === "booked" ? `<button class="btn btn-secondary" id="otw-btn">🔵 Mark On The Way</button>` : ""}
+          ${["booked","on_the_way"].includes(booking.status) ? `<button class="btn btn-danger" id="cancel-btn">Cancel Booking</button>` : ""}
+        </div>
+      </div>
+
+      ${["booked","on_the_way"].includes(booking.status) ? `
+      <div class="card mb-24" style="border-color:rgba(248,113,113,0.4);">
+        <h3 class="mb-8">🔴 LIVE EVENT CHECK-IN</h3>
+        <p class="text-dim mb-16" style="font-size:13px;">Reached the venue? Submit a live photo to verify your arrival.</p>
+        <div class="field"><label>📸 Take / Upload Live Photo</label><input type="file" id="checkin-photo" accept="image/*" capture="environment" /></div>
+        <p class="field-hint" id="loc-hint">📍 Location will be captured if permission is granted.</p>
+        <button class="btn btn-urgent btn-block" id="checkin-btn">CHECK IN NOW</button>
+      </div>` : ""}
+
+      ${checkIns.length ? `
+      <div class="card mb-24">
+        <h3 class="mb-16">✅ Check-In Submitted</h3>
+        ${checkIns.map((c) => `
+          <div class="checkin-preview mb-16">
+            <span class="live-tag">LIVE</span>
+            <img src="${c.photoURL}" />
+          </div>
+          <p class="text-dim" style="font-size:13px;">🕐 Checked in ${c.timestamp?.toDate ? c.timestamp.toDate().toLocaleString() : "just now"}${c.location ? ` · 📍 ${c.location.lat.toFixed(3)}, ${c.location.lng.toFixed(3)}` : ""}</p>
+        `).join("")}
+      </div>` : ""}
+
+      ${booking.status === "completed" ? `
+        <div class="card" id="rating-card">
+          ${alreadyRated ? `<p class="text-dim">You've already rated this company for this event. Thank you!</p>` : `
+            <h3 class="mb-16">Rate The Company</h3>
+            <div id="rating-form"></div>
+          `}
+        </div>` : ""}
+    `;
+
+    document.getElementById("otw-btn")?.addEventListener("click", async () => {
+      await updateBookingStatus(bookingId, "on_the_way");
+      toast("Status updated: On The Way", "success");
+      render();
+    });
+
+    document.getElementById("cancel-btn")?.addEventListener("click", async () => {
+      if (!(await confirmDialog("Cancel this booking? Your position will be released back to other promoters."))) return;
+      await cancelBooking(bookingId, booking.eventId);
+      toast("Booking cancelled.", "info");
+      render();
+    });
+
+    document.getElementById("checkin-btn")?.addEventListener("click", async () => {
+      const file = document.getElementById("checkin-photo").files[0];
+      if (!file) return toast("Please add a live photo first.", "error");
+      const btn = document.getElementById("checkin-btn");
+      btn.disabled = true; btn.textContent = "Submitting...";
+      try {
+        await submitCheckIn(booking, file);
+        toast("Check-in submitted!", "success");
+        render();
+      } catch (err) {
+        toast(err.message, "error");
+        btn.disabled = false; btn.textContent = "CHECK IN NOW";
+      }
+    });
+
+    if (booking.status === "completed" && !alreadyRated) mountRatingForm(booking);
+  }
+
+  function mountRatingForm(booking) {
+    const cats = categoriesFor("promoter"); // promoter rating a company
+    const labels = { professionalism: "Professionalism", communication: "Communication", workEnvironment: "Work Environment", paymentExperience: "Payment Experience" };
+    const host = document.getElementById("rating-form");
+    const values = Object.fromEntries(cats.map((c) => [c, 0]));
+    host.innerHTML = cats.map((c) => `
+      <div class="rating-category-row">
+        <span>${labels[c]}</span>
+        <div class="stars-input" data-cat="${c}">${[1,2,3,4,5].map((n) => `<span data-n="${n}">★</span>`).join("")}</div>
+      </div>`).join("") + `
+      <div class="field"><label>Comment (optional)</label><textarea id="rating-comment" rows="3"></textarea></div>
+      <button class="btn btn-primary btn-block" id="submit-rating">Submit Rating</button>`;
+
+    host.querySelectorAll(".stars-input").forEach((row) => {
+      row.querySelectorAll("span").forEach((star) => {
+        star.addEventListener("click", () => {
+          const n = Number(star.dataset.n);
+          values[row.dataset.cat] = n;
+          row.querySelectorAll("span").forEach((s) => s.classList.toggle("active", Number(s.dataset.n) <= n));
+        });
+      });
+    });
+
+    document.getElementById("submit-rating").addEventListener("click", async () => {
+      if (Object.values(values).some((v) => v === 0)) return toast("Please rate every category.", "error");
+      try {
+        await submitRating(booking, "promoter", values, document.getElementById("rating-comment").value.trim());
+        toast("Thanks for your feedback!", "success");
+        render();
+      } catch (err) {
+        toast(err.message === "ALREADY_RATED" ? "You've already rated this event." : "Something went wrong.", "error");
+      }
+    });
+  }
+
+  render();
+</script>
+</body>
+</html>

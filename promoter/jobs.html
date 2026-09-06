@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Discover Gigs — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="page-header">
+    <h1>🔍 Discover Gigs</h1>
+    <p>Browse normal opportunities or book an urgent position instantly.</p>
+  </div>
+
+  <div class="filter-bar">
+    <div class="field"><label>Type</label>
+      <select id="f-type"><option value="">All</option><option value="urgent">🔥 Urgent Only</option><option value="normal">Normal Only</option></select>
+    </div>
+    <div class="field"><label>Location</label><input type="text" id="f-location" placeholder="e.g. Mumbai" /></div>
+    <div class="field"><label>Category</label><input type="text" id="f-category" placeholder="e.g. Brand Activation" /></div>
+    <div class="field"><label>Date</label><input type="date" id="f-date" /></div>
+    <div class="field"><label>Min. Payment (₹)</label><input type="number" id="f-payment" placeholder="0" /></div>
+    <button class="btn btn-secondary" id="f-apply">Filter</button>
+  </div>
+
+  <div id="results" class="card-grid cols-2"></div>
+  <div id="empty" class="empty-state hidden"><div class="empty-state-icon">🫥</div>No jobs match your filters right now.</div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getPromoter } from "/js/db.js";
+  import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
+  import { bookPosition, applyToEvent, BOOKING_ERRORS } from "/js/booking.js";
+  import { jobCardHTML, tickCountdowns } from "/js/render.js";
+  import { toast, openModal, escapeHTML, fmtDate } from "/js/ui.js";
+
+  mountLayout({ role: "promoter" });
+  const { user } = await requireAuth("promoter");
+  const promoter = await getPromoter(user.uid);
+
+  const resultsEl = document.getElementById("results");
+  const emptyEl = document.getElementById("empty");
+
+  async function load() {
+    resultsEl.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
+    const filters = {
+      hiringType: document.getElementById("f-type").value,
+      location: document.getElementById("f-location").value,
+      category: document.getElementById("f-category").value,
+      date: document.getElementById("f-date").value,
+      minPayment: document.getElementById("f-payment").value,
+    };
+    let events = await listOpenEvents(filters);
+    events = await Promise.all(events.map(reconcileUrgentWindow));
+    events = events.filter((e) => e.status === "open" || e.status === "fulfilled");
+    events.sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"));
+
+    emptyEl.classList.toggle("hidden", events.length > 0);
+    resultsEl.innerHTML = events.map((e) => jobCardHTML(e)).join("");
+    tickCountdowns(resultsEl);
+
+    resultsEl.querySelectorAll("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => handleAction(btn, events.find((e) => e.id === btn.closest(".job-card").dataset.eventId)));
+    });
+  }
+
+  async function handleAction(btn, event) {
+    if (!promoter.city || !promoter.fullName) {
+      return toast("Please complete your profile before applying or booking.", "error");
+    }
+    const isUrgent = event.hiringType === "urgent";
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = isUrgent ? "Booking..." : "Applying...";
+    try {
+      if (isUrgent) {
+        const result = await bookPosition(event.id, promoter);
+        showBookingConfirmation(event, result);
+      } else {
+        await applyToEvent(event.id, promoter);
+        toast("Application submitted!", "success");
+      }
+      load();
+    } catch (err) {
+      const msg = BOOKING_ERRORS[err.message] || (err.message === "ALREADY_APPLIED" ? "You already applied to this job." : "Something went wrong.");
+      toast(msg, "error");
+      btn.disabled = false;
+      btn.textContent = original;
+      load();
+    }
+  }
+
+  function showBookingConfirmation(event, result) {
+    openModal(`
+      <div class="text-center">
+        <div style="font-size:44px;">🎉</div>
+        <h2 class="mt-16">YOU'RE BOOKED!</h2>
+        <p class="text-dim mt-8">You have successfully confirmed your position.</p>
+        <div class="card mt-24" style="text-align:left;">
+          <p><strong>${escapeHTML(event.eventName)}</strong></p>
+          <p class="text-dim" style="font-size:13px;">${escapeHTML(event.brand || "")}</p>
+          <div class="mt-16" style="font-size:14px;line-height:1.9;">
+            <div>📅 ${fmtDate(event.date)}</div>
+            <div>🕐 ${event.startTime}–${event.endTime}</div>
+            <div>📍 ${escapeHTML(event.location)}</div>
+            <div>💰 ₹${Number(event.paymentAmount).toLocaleString("en-IN")}</div>
+            <div>🎟️ Booking ID: ${result.bookingCode}</div>
+          </div>
+          <span class="status-pill status-booked mt-16" style="display:inline-block;">🟡 BOOKED</span>
+        </div>
+        <div class="flex gap-12 mt-24">
+          <a href="/promoter/bookings.html" class="btn btn-primary btn-block">View Event</a>
+        </div>
+      </div>
+    `);
+  }
+
+  document.getElementById("f-apply").addEventListener("click", load);
+  load();
+  setInterval(() => tickCountdowns(resultsEl), 1000);
+</script>
+</body>
+</html>

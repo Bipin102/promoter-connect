@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Find Promoters — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="page-header"><h1>👥 Find Promoters</h1><p>Search and filter verified promoter profiles.</p></div>
+
+  <div class="filter-bar">
+    <div class="field"><label>Location</label><input type="text" id="f-city" placeholder="e.g. Mumbai" /></div>
+    <div class="field"><label>Skill</label><input type="text" id="f-skill" placeholder="e.g. Hosting" /></div>
+    <div class="field"><label>Language</label><input type="text" id="f-lang" placeholder="e.g. Hindi" /></div>
+    <div class="field"><label>Gender</label>
+      <select id="f-gender"><option value="">Any</option><option>Female</option><option>Male</option><option>Other</option></select>
+    </div>
+    <div class="field"><label>Min. Rating</label>
+      <select id="f-rating"><option value="">Any</option><option value="4">4+</option><option value="4.5">4.5+</option></select>
+    </div>
+    <div class="field" style="min-width:auto;"><label>&nbsp;</label>
+      <label style="display:flex;align-items:center;gap:8px;padding:12px 0;"><input type="checkbox" id="f-verified" style="width:auto;" /> Verified only</label>
+    </div>
+    <button class="btn btn-secondary" id="f-apply">Search</button>
+  </div>
+
+  <div id="results" class="card-grid"></div>
+  <div id="empty" class="empty-state hidden"><div class="empty-state-icon">🫥</div>No promoters match your filters.</div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { listPromoters } from "/js/db.js";
+  import { stars, badgeList, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "company" });
+  await requireAuth("company");
+
+  async function load() {
+    const filters = {
+      city: document.getElementById("f-city").value,
+      skill: document.getElementById("f-skill").value,
+      language: document.getElementById("f-lang").value,
+      gender: document.getElementById("f-gender").value,
+      minRating: document.getElementById("f-rating").value,
+      verifiedOnly: document.getElementById("f-verified").checked,
+    };
+    const promoters = await listPromoters(filters);
+    document.getElementById("empty").classList.toggle("hidden", promoters.length > 0);
+    document.getElementById("results").innerHTML = promoters.map((p) => `
+      <a href="/shared/promoter-profile.html?id=${p.id}" class="card">
+        <div class="flex gap-16 mb-16" style="align-items:center;">
+          <div class="avatar lg">${p.photoURL ? `<img src="${p.photoURL}" />` : (p.fullName||"?")[0].toUpperCase()}</div>
+          <div>
+            <strong>${escapeHTML(p.fullName || "Promoter")}</strong>
+            <p class="text-dim" style="font-size:13px;">📍 ${escapeHTML(p.city || "—")}</p>
+            <div class="mt-8">${stars(p.ratingAvg||0, p.ratingCount||0)}</div>
+          </div>
+        </div>
+        <p class="text-dim mb-16" style="font-size:13px;">🎯 ${p.eventsCompleted||0} Events · 🏆 ${p.yearsExperience||0} yrs experience</p>
+        <div class="profile-badges">${badgeList(p, "promoter")}</div>
+      </a>`).join("");
+  }
+
+  document.getElementById("f-apply").addEventListener("click", load);
+  load();
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Profile — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="page-header">
+    <h1 id="page-title">My Profile</h1>
+    <p>Companies see this before booking or accepting you for an event.</p>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <form id="profile-form">
+        <div class="field">
+          <label>Profile Photo</label>
+          <div class="flex gap-16" style="align-items:center;">
+            <div class="avatar lg" id="photo-preview">?</div>
+            <input type="file" id="photo-input" accept="image/*" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field"><label>Full Name</label><input type="text" id="fullName" required /></div>
+          <div class="field"><label>City / Location</label><input type="text" id="city" placeholder="e.g. Mumbai" required /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Age</label><input type="number" id="age" min="16" max="80" /></div>
+          <div class="field">
+            <label>Gender</label>
+            <select id="gender"><option value="">Prefer not to say</option><option>Female</option><option>Male</option><option>Other</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Height</label><input type="text" id="height" placeholder="e.g. 5'6&quot;" /></div>
+          <div class="field"><label>Years of Experience</label><input type="number" id="yearsExperience" min="0" /></div>
+        </div>
+
+        <div class="field"><label>Skills (comma-separated)</label><input type="text" id="skills" placeholder="Brand Activation, Hosting, Sampling" /></div>
+        <div class="field"><label>Languages (comma-separated)</label><input type="text" id="languages" placeholder="English, Hindi, Marathi" /></div>
+        <div class="field"><label>Previous Brands Worked With (comma-separated)</label><input type="text" id="brands" placeholder="Nike, Cadbury, Nykaa" /></div>
+        <div class="field"><label>Event Categories (comma-separated)</label><input type="text" id="categories" placeholder="Brand Activation, Exhibition, Retail" /></div>
+        <div class="field">
+          <label>Availability</label>
+          <select id="availability"><option value="available">Available</option><option value="busy">Currently Busy</option></select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="save-btn">Save Profile</button>
+      </form>
+    </div>
+
+    <div>
+      <div class="card mb-24">
+        <h3 class="mb-16">Reputation Preview</h3>
+        <div id="rep-preview" class="text-dim" style="font-size:14px;">Save your profile to see your public preview.</div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between mb-16">
+          <h3>Portfolio</h3>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+            + Add Photo <input type="file" id="portfolio-input" accept="image/*" hidden />
+          </label>
+        </div>
+        <div class="gallery-grid" id="gallery"></div>
+        <p class="text-dim" id="gallery-empty" style="font-size:13px;">No portfolio photos yet — add work/event photos to build credibility.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getPromoter, updatePromoter, addPortfolioImage, listPortfolio, removePortfolioImage } from "/js/db.js";
+  import { uploadImage } from "/js/storage.js";
+  import { toast, stars, badgeList, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "promoter" });
+  const { user } = await requireAuth("promoter");
+
+  let promoter = await getPromoter(user.uid);
+  fillForm(promoter);
+  renderReputation(promoter);
+  await loadGallery();
+
+  if (new URLSearchParams(location.search).get("onboarding")) {
+    toast("Welcome! Complete your profile so companies can discover you.", "info", 5000);
+  }
+
+  function fillForm(p) {
+    document.getElementById("fullName").value = p.fullName || "";
+    document.getElementById("city").value = p.city || "";
+    document.getElementById("age").value = p.age || "";
+    document.getElementById("gender").value = p.gender || "";
+    document.getElementById("height").value = p.height || "";
+    document.getElementById("yearsExperience").value = p.yearsExperience || 0;
+    document.getElementById("skills").value = (p.skills || []).join(", ");
+    document.getElementById("languages").value = (p.languages || []).join(", ");
+    document.getElementById("brands").value = (p.brands || []).join(", ");
+    document.getElementById("categories").value = (p.categories || []).join(", ");
+    document.getElementById("availability").value = p.availability || "available";
+    const preview = document.getElementById("photo-preview");
+    preview.innerHTML = p.photoURL ? `<img src="${p.photoURL}" />` : (p.fullName || "?")[0].toUpperCase();
+  }
+
+  function renderReputation(p) {
+    document.getElementById("rep-preview").innerHTML = `
+      <h3 style="margin-bottom:8px;">${escapeHTML(p.fullName || "")}</h3>
+      <div class="mb-8">${stars(p.ratingAvg || 0, p.ratingCount || 0)}</div>
+      <p>🎯 ${p.eventsCompleted || 0} Events Completed</p>
+      <p>📍 ${escapeHTML(p.city || "Not set")}</p>
+      <div class="profile-badges">${badgeList(p, "promoter")}</div>
+    `;
+  }
+
+  document.getElementById("profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("save-btn");
+    btn.disabled = true; btn.textContent = "Saving...";
+    try {
+      const file = document.getElementById("photo-input").files[0];
+      let photoURL = promoter.photoURL || "";
+      if (file) photoURL = await uploadImage(`promoters/${user.uid}/profile-${Date.now()}.jpg`, file);
+
+      const data = {
+        fullName: document.getElementById("fullName").value.trim(),
+        city: document.getElementById("city").value.trim(),
+        age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
+        gender: document.getElementById("gender").value,
+        height: document.getElementById("height").value.trim(),
+        yearsExperience: Number(document.getElementById("yearsExperience").value) || 0,
+        skills: splitCsv(document.getElementById("skills").value),
+        languages: splitCsv(document.getElementById("languages").value),
+        brands: splitCsv(document.getElementById("brands").value),
+        categories: splitCsv(document.getElementById("categories").value),
+        availability: document.getElementById("availability").value,
+        photoURL,
+      };
+      await updatePromoter(user.uid, data);
+      promoter = { ...promoter, ...data };
+      fillForm(promoter);
+      renderReputation(promoter);
+      toast("Profile saved.", "success");
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Save Profile";
+    }
+  });
+
+  document.getElementById("portfolio-input").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const url = await uploadImage(`promoters/${user.uid}/portfolio/${Date.now()}.jpg`, file);
+      await addPortfolioImage(user.uid, url);
+      toast("Portfolio photo added.", "success");
+      await loadGallery();
+    } catch (err) {
+      toast(err.message, "error");
+    }
+    e.target.value = "";
+  });
+
+  async function loadGallery() {
+    const items = await listPortfolio(user.uid);
+    const gallery = document.getElementById("gallery");
+    document.getElementById("gallery-empty").style.display = items.length ? "none" : "block";
+    gallery.innerHTML = items.map((i) => `
+      <div style="position:relative;">
+        <img src="${i.url}" />
+        <button data-id="${i.id}" class="remove-photo" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;">✕</button>
+      </div>`).join("");
+    gallery.querySelectorAll(".remove-photo").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await removePortfolioImage(user.uid, btn.dataset.id);
+        await loadGallery();
+      });
+    });
+  }
+
+  function splitCsv(str) {
+    return str.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+</script>
+</body>
+</html>

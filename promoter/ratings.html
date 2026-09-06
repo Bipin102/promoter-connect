@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Ratings — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="page-header"><h1>⭐ My Ratings & Reviews</h1><p>Feedback from companies after completed events.</p></div>
+  <div class="card mb-24" id="summary"></div>
+  <div id="list"></div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getPromoter } from "/js/db.js";
+  import { listRatingsFor } from "/js/ratings.js";
+  import { stars, escapeHTML } from "/js/ui.js";
+
+  mountLayout({ role: "promoter" });
+  const { user } = await requireAuth("promoter");
+  const promoter = await getPromoter(user.uid);
+  const ratings = await listRatingsFor(user.uid);
+
+  document.getElementById("summary").innerHTML = `
+    <div class="flex-between" style="flex-wrap:wrap;gap:16px;">
+      <div>${stars(promoter.ratingAvg || 0, promoter.ratingCount || 0)}</div>
+      <div class="text-dim">🎯 ${promoter.eventsCompleted || 0} Events Completed</div>
+    </div>`;
+
+  const labels = { professionalism: "Professionalism", punctuality: "Punctuality", communication: "Communication", workQuality: "Work Quality" };
+
+  document.getElementById("list").innerHTML = ratings.length
+    ? ratings.map((r) => `
+      <div class="card mb-16">
+        <div class="flex-between mb-8">
+          <strong>${r.overall.toFixed(1)} ★</strong>
+          <span class="text-dim" style="font-size:12px;">${r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString() : ""}</span>
+        </div>
+        <p class="text-dim mb-8">${escapeHTML(r.comment || "No written comment.")}</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-faint);">
+          ${Object.entries(r.categories || {}).map(([k,v]) => `<span>${labels[k]||k}: ${v}★</span>`).join("")}
+        </div>
+      </div>`).join("")
+    : `<div class="empty-state"><div class="empty-state-icon">⭐</div>No ratings yet — complete your first event to start building your reputation.</div>`;
+</script>
+</body>
+</html>

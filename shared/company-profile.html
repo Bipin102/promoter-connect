@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Company Profile — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell" id="content"><div class="loading-state"><div class="spinner"></div></div></div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { getCompany } from "/js/db.js";
+  import { listRatingsFor } from "/js/ratings.js";
+  import { stars, badgeList, escapeHTML } from "/js/ui.js";
+
+  const { profile } = await requireAuth();
+  mountLayout({ role: profile.role });
+
+  const id = new URLSearchParams(location.search).get("id");
+  const content = document.getElementById("content");
+  if (!id) { content.innerHTML = `<div class="empty-state">Company not found.</div>`; throw new Error("no id"); }
+
+  const [company, ratings] = await Promise.all([getCompany(id), listRatingsFor(id)]);
+  if (!company) { content.innerHTML = `<div class="empty-state">Company not found.</div>`; throw new Error("not found"); }
+
+  content.innerHTML = `
+    <div class="profile-hero">
+      <div class="avatar xl">${company.logoURL ? `<img src="${company.logoURL}" />` : (company.companyName||"?")[0].toUpperCase()}</div>
+      <div class="profile-hero-info">
+        <h1>${escapeHTML(company.companyName || "Company")}</h1>
+        <div>${stars(company.ratingAvg||0, company.ratingCount||0)}</div>
+        <div class="profile-hero-meta">
+          <span>📌 ${company.eventsPosted||0} Events Posted</span>
+          <span>🎯 ${company.eventsCompleted||0} Events Completed</span>
+          <span>📍 ${escapeHTML(company.location || "—")}</span>
+        </div>
+        <div class="profile-badges">${badgeList(company, "company")}</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <h3 class="mb-16">About ${escapeHTML(company.companyName || "")}</h3>
+        <p class="text-dim mb-16">${escapeHTML(company.description || "No description provided yet.")}</p>
+        <p style="font-size:14px;">Industry: ${escapeHTML(company.industry || "—")}</p>
+        <p style="font-size:14px;">Contact: ${escapeHTML(company.contact || "—")}</p>
+
+        <h3 class="mt-32 mb-16">Reviews From Promoters</h3>
+        ${ratings.length ? ratings.slice(0,10).map((r) => `
+          <div class="mb-16" style="border-bottom:1px solid var(--border);padding-bottom:12px;">
+            <strong>${r.overall.toFixed(1)} ★</strong>
+            <p class="text-dim" style="font-size:13px;">${escapeHTML(r.comment || "No written comment.")}</p>
+          </div>`).join("") : `<p class="text-dim">No reviews yet.</p>`}
+      </div>
+
+      <div class="card">
+        <h3 class="mb-16">Snapshot</h3>
+        <p style="font-size:14px;line-height:2;">
+          ⭐ ${(company.ratingAvg||0).toFixed(1)} Average Rating<br/>
+          📌 ${company.eventsPosted||0} Events Posted<br/>
+          🎯 ${company.eventsCompleted||0} Events Completed<br/>
+          ${company.verified ? "✓ Verified Company" : "Not yet verified"}
+        </p>
+      </div>
+    </div>
+  `;
+</script>
+</body>
+</html>

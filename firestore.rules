@@ -1,0 +1,98 @@
+rules_version = '2';
+
+// Deploy: Firebase Console → Firestore Database → Rules → paste this → Publish
+// (or `firebase deploy --only firestore:rules` if you set up the Firebase CLI).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(id) { return isSignedIn() && request.auth.uid == id; }
+    // Demo docs (admin/seed.html) use ids like "demo_p1" and are writable by any
+    // signed-in user so the seeder works without a service account. They hold no
+    // real personal data.
+    function isDemoId(id) { return id.matches('demo_.*'); }
+    function eventOnlyFulfillmentFieldsChanged() {
+      let allowed = ['positionsFilled', 'status', 'fulfilledAt', 'updatedAt'];
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) && request.resource.data.role == resource.data.role;
+    }
+
+    match /promoters/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid) || (isSignedIn() && isDemoId(uid));
+
+      match /portfolio/{imgId} {
+        allow read: if isSignedIn();
+        allow write: if isOwner(uid) || (isSignedIn() && isDemoId(uid));
+      }
+    }
+
+    match /companies/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid) || (isSignedIn() && isDemoId(uid));
+    }
+
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.companyId == request.auth.uid;
+      // The company that owns the event can fully edit it. Any other signed-in user
+      // (a promoter, via the atomic booking transaction in js/booking.js) may only
+      // ever touch the fulfillment counters — never rewrite the event itself.
+      allow update: if isSignedIn() && (
+        resource.data.companyId == request.auth.uid ||
+        isDemoId(eventId) ||
+        eventOnlyFulfillmentFieldsChanged()
+      );
+      allow delete: if isOwner(resource.data.companyId);
+    }
+
+    match /applications/{appId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.promoterId == request.auth.uid;
+      allow update: if isSignedIn() &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.companyId == request.auth.uid;
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (
+        request.resource.data.promoterId == request.auth.uid ||
+        request.resource.data.companyId == request.auth.uid
+      );
+      allow update: if isSignedIn() && (
+        resource.data.promoterId == request.auth.uid || resource.data.companyId == request.auth.uid
+      );
+    }
+
+    match /liveCheckIns/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.promoterId == request.auth.uid;
+    }
+
+    match /ratings/{ratingId} {
+      allow read: if isSignedIn();
+      // Only the participant on a COMPLETED booking can rate, and only once per side
+      // (enforced by the deterministic `${bookingId}_${fromRole}` doc id in js/ratings.js).
+      allow create: if isSignedIn() && request.resource.data.fromId == request.auth.uid &&
+        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.status == 'completed';
+    }
+
+    match /notifications/{id} {
+      allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Created by whichever client performs the triggering action (booking, rating, etc.)
+      // on behalf of the *other* party's inbox — there is no backend function in this MVP
+      // to do it server-side. Tighten this with Cloud Functions in production.
+      allow create: if isSignedIn();
+    }
+
+    match /payments/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && resource.data.companyId == request.auth.uid;
+    }
+  }
+}

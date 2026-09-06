@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Event Details — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell" style="max-width:820px;">
+  <div id="content"><div class="loading-state"><div class="spinner"></div></div></div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAuth } from "/js/auth.js";
+  import { mountLayout } from "/js/layout.js";
+  import { watchEvent, getEvent, reconcileUrgentWindow, cancelEvent, URGENT_WINDOW_MS } from "/js/events.js";
+  import {
+    watchCompanyBookingsForEvent, listApplicationsForEvent, respondToApplication, completeEvent
+  } from "/js/booking.js";
+  import { listCheckInsForEvent } from "/js/checkin.js";
+  import { hasRated, submitRating, categoriesFor } from "/js/ratings.js";
+  import { toast, confirmDialog, stars, fmtDate, fmtCountdown, escapeHTML, openModal } from "/js/ui.js";
+  import { db, serverTimestamp } from "/js/firebase-init.js";
+  import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  mountLayout({ role: "company" });
+  const { user } = await requireAuth("company");
+  const eventId = new URLSearchParams(location.search).get("id");
+  const content = document.getElementById("content");
+  if (!eventId) { content.innerHTML = `<div class="empty-state">Event not found.</div>`; throw new Error("no id"); }
+
+  let currentEvent = null;
+  let currentBookings = [];
+  let timerInterval = null;
+
+  watchEvent(eventId, async (ev) => {
+    if (!ev || ev.companyId !== user.uid) { content.innerHTML = `<div class="empty-state">Event not found.</div>`; return; }
+    currentEvent = await reconcileUrgentWindow(ev);
+    renderAll();
+  });
+
+  watchCompanyBookingsForEvent(eventId, (bookings) => {
+    currentBookings = bookings;
+    renderAll();
+  });
+
+  let applications = [];
+  async function refreshApplications() {
+    applications = await listApplicationsForEvent(eventId);
+    renderAll();
+  }
+  refreshApplications();
+
+  let checkIns = [];
+  async function refreshCheckIns() {
+    checkIns = await listCheckInsForEvent(eventId);
+    renderAll();
+  }
+  refreshCheckIns();
+
+  function renderAll() {
+    if (!currentEvent) return;
+    const e = currentEvent;
+    const isUrgent = e.hiringType === "urgent";
+    const activeBookings = currentBookings.filter((b) => b.status !== "cancelled");
+    const remaining = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
+
+    content.innerHTML = `
+      <div class="card mb-24">
+        <div class="flex-between mb-8" style="flex-wrap:wrap;gap:10px;">
+          <div>
+            <h1 style="font-size:22px;">${escapeHTML(e.eventName)} ${isUrgent ? `<span class="badge badge-urgent">🔥 URGENT · 1-HR</span>` : ""}</h1>
+            <p class="text-dim">${escapeHTML(e.brand || e.category || "")}</p>
+          </div>
+          <span class="status-pill status-${e.status}">${e.status.replace("_"," ").toUpperCase()}</span>
+        </div>
+        <div style="font-size:14px;line-height:2;">
+          <div>📅 ${fmtDate(e.date)} &nbsp; 🕐 ${e.startTime}–${e.endTime}</div>
+          <div>📍 ${escapeHTML(e.location)}</div>
+          <div>💰 ₹${Number(e.paymentAmount||0).toLocaleString("en-IN")} (${e.paymentType.replace("_"," ")})</div>
+          <div>👥 ${e.positionsFilled || 0}/${e.positionsRequired} Confirmed</div>
+        </div>
+        <div class="flex gap-12 mt-16" style="flex-wrap:wrap;">
+          ${!["completed","cancelled"].includes(e.status) ? `<button class="btn btn-danger" id="cancel-req">Cancel Requirement</button>` : ""}
+          ${activeBookings.length && e.status !== "completed" && e.status !== "cancelled" ? `<button class="btn btn-primary" id="complete-btn">Mark Event Completed</button>` : ""}
+        </div>
+      </div>
+
+      ${isUrgent ? trackerHTML(e) : ""}
+
+      ${!isUrgent && applications.length ? `
+        <div class="dash-section">
+          <h2 class="mb-16">Applications (${applications.length})</h2>
+          ${applications.map((a) => `
+            <div class="promoter-row mb-16" style="justify-content:space-between;">
+              <div class="flex gap-16" style="align-items:center;">
+                <div class="avatar">${(a.promoterName||"?")[0]}</div>
+                <div>
+                  <strong>${escapeHTML(a.promoterName)}</strong>
+                  <p class="text-dim" style="font-size:12px;">Applied ${a.appliedAt?.toDate ? a.appliedAt.toDate().toLocaleDateString() : ""}</p>
+                </div>
+              </div>
+              <div class="flex gap-8" style="align-items:center;">
+                <span class="status-pill status-${a.status}">${a.status.toUpperCase()}</span>
+                <a href="/shared/promoter-profile.html?id=${a.promoterId}" class="btn btn-ghost btn-sm">View Profile</a>
+                ${a.status === "pending" ? `
+                  <button class="btn btn-primary btn-sm" data-accept="${a.id}">Accept</button>
+                  <button class="btn btn-danger btn-sm" data-reject="${a.id}">Reject</button>` : ""}
+              </div>
+            </div>`).join("")}
+        </div>` : ""}
+
+      <div class="dash-section">
+        <h2 class="mb-16">👥 Confirmed Promoters (${activeBookings.length})</h2>
+        ${activeBookings.length ? activeBookings.map((b) => bookingRowHTML(b, e)).join("") : `<div class="empty-state"><div class="empty-state-icon">👤</div>No promoters confirmed yet.</div>`}
+      </div>
+    `;
+
+    attachHandlers(e);
+    startTimer(e);
+  }
+
+  function trackerHTML(e) {
+    const remaining = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
+    const pct = Math.min(100, ((e.positionsFilled || 0) / e.positionsRequired) * 100);
+    if (e.status === "fulfilled") {
+      const started = e.urgentDeadlineMs ? e.urgentDeadlineMs - URGENT_WINDOW_MS : null;
+      const fulfilledMs = e.fulfilledAt?.toDate ? e.fulfilledAt.toDate().getTime() : Date.now();
+      const takenMin = started ? Math.max(1, Math.round((fulfilledMs - started) / 60000)) : "—";
+      return `
+        <div class="tracker-result success mb-24">
+          <h2>✅ REQUIREMENT FULFILLED</h2>
+          <p class="mt-8" style="font-size:18px;font-weight:700;">${e.positionsFilled}/${e.positionsRequired} Promoters Confirmed</p>
+          <p class="text-dim mt-8">Time Taken: ${takenMin} Minute${takenMin === 1 ? "" : "s"}</p>
+        </div>`;
+    }
+    if (e.status === "window_ended") {
+      return `
+        <div class="tracker-result partial mb-24">
+          <h2>🟡 1-HOUR FULFILLMENT WINDOW ENDED</h2>
+          <p class="mt-8" style="font-size:18px;font-weight:700;">${e.positionsFilled}/${e.positionsRequired} Promoters Confirmed</p>
+          <p class="text-dim mt-8">${remaining} position${remaining === 1 ? "" : "s"} still needed.</p>
+          <div class="flex gap-12 flex-center mt-16" style="flex-wrap:wrap;">
+            <button class="btn btn-secondary" id="reopen-btn">Continue Searching (Reopen)</button>
+            <button class="btn btn-danger" id="cancel-req-2">Cancel Requirement</button>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="tracker mb-24">
+        <div class="tracker-head">
+          <span class="tracker-title">⚡ FINDING YOUR PROMOTERS</span>
+          <span class="status-pill status-open">LIVE</span>
+        </div>
+        <div class="flex-between">
+          <span class="text-dim" style="font-size:14px;">Promoters Required: <strong style="color:var(--text)">${e.positionsRequired}</strong></span>
+          <span class="tracker-timer" id="tracker-timer">--:--</span>
+        </div>
+        <div class="tracker-progress-track"><div class="tracker-progress-fill" style="width:${pct}%;"></div></div>
+        <div class="tracker-counts">
+          <span>${e.positionsFilled || 0} / ${e.positionsRequired} Confirmed</span>
+          <span class="text-dim" style="font-weight:500;">⏱️ Time Remaining</span>
+        </div>
+      </div>`;
+  }
+
+  function bookingRowHTML(b, e) {
+    const checkIn = checkIns.find((c) => c.bookingId === b.id);
+    return `
+      <div class="promoter-row mb-16" style="justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div class="flex gap-16" style="align-items:center;">
+          <div class="avatar">${(b.promoterName||"?")[0]}</div>
+          <div>
+            <strong>${escapeHTML(b.promoterName)}</strong>
+            <p class="text-dim" style="font-size:12px;">🎟️ ${b.bookingCode}</p>
+            ${checkIn ? `<p style="font-size:12px;color:var(--green);">🟢 ARRIVED AT EVENT · ${checkIn.timestamp?.toDate ? checkIn.timestamp.toDate().toLocaleTimeString() : ""}</p>` : ""}
+          </div>
+        </div>
+        <div class="flex gap-8" style="align-items:center;flex-wrap:wrap;">
+          <span class="status-pill status-${b.status}">${b.status.replace("_"," ").toUpperCase()}</span>
+          <a href="/shared/promoter-profile.html?id=${b.promoterId}" class="btn btn-ghost btn-sm">View Profile</a>
+          ${b.status === "completed" ? `<button class="btn btn-primary btn-sm" data-rate="${b.id}">Rate Promoter</button>` : ""}
+        </div>
+        ${checkIn ? `<div style="width:100%;"><img src="${checkIn.photoURL}" style="max-height:180px;border-radius:10px;object-fit:cover;" /></div>` : ""}
+      </div>`;
+  }
+
+  function startTimer(e) {
+    clearInterval(timerInterval);
+    if (e.hiringType !== "urgent" || e.status !== "open") return;
+    const tick = () => {
+      const el = document.getElementById("tracker-timer");
+      if (!el) return;
+      const ms = e.urgentDeadlineMs - Date.now();
+      el.textContent = fmtCountdown(ms);
+      el.classList.toggle("ending", ms < 5 * 60 * 1000);
+      if (ms <= 0) { clearInterval(timerInterval); reconcileUrgentWindow(e); }
+    };
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  function attachHandlers(e) {
+    document.getElementById("cancel-req")?.addEventListener("click", () => doCancelReq(e));
+    document.getElementById("cancel-req-2")?.addEventListener("click", () => doCancelReq(e));
+    document.getElementById("reopen-btn")?.addEventListener("click", async () => {
+      await updateDoc(doc(db, "events", e.id), { status: "open", urgentDeadlineMs: Date.now() + URGENT_WINDOW_MS, updatedAt: serverTimestamp() });
+      toast("Requirement reopened for another 60 minutes.", "success");
+    });
+    document.getElementById("complete-btn")?.addEventListener("click", async () => {
+      if (!(await confirmDialog("Mark this event as completed? This will close out all active bookings."))) return;
+      await completeEvent(e.id);
+      toast("Event marked completed.", "success");
+    });
+    content.querySelectorAll("[data-accept]").forEach((btn) => btn.addEventListener("click", async () => {
+      try { await respondToApplication(btn.dataset.accept, "accepted"); toast("Promoter accepted!", "success"); refreshApplications(); }
+      catch (err) { toast(err.message === "FULL" ? "All positions already filled." : "Error accepting.", "error"); }
+    }));
+    content.querySelectorAll("[data-reject]").forEach((btn) => btn.addEventListener("click", async () => {
+      await respondToApplication(btn.dataset.reject, "rejected"); toast("Application rejected.", "info"); refreshApplications();
+    }));
+    content.querySelectorAll("[data-rate]").forEach((btn) => btn.addEventListener("click", () => openRatingModal(btn.dataset.rate)));
+  }
+
+  async function doCancelReq(e) {
+    if (!(await confirmDialog("Cancel this requirement? Confirmed promoters will be notified."))) return;
+    await cancelEvent(e.id);
+    toast("Requirement cancelled.", "info");
+  }
+
+  async function openRatingModal(bookingId) {
+    const booking = currentBookings.find((b) => b.id === bookingId);
+    if (await hasRated(bookingId, "company")) return toast("You've already rated this promoter for this event.", "info");
+    const cats = categoriesFor("company");
+    const labels = { professionalism: "Professionalism", punctuality: "Punctuality", communication: "Communication", workQuality: "Work Quality" };
+    const values = Object.fromEntries(cats.map((c) => [c, 0]));
+    const overlay = openModal(`
+      <h3 class="mb-16">Rate ${escapeHTML(booking.promoterName)}</h3>
+      <div id="modal-rating-rows"></div>
+      <div class="field"><label>Comment (optional)</label><textarea id="modal-rating-comment" rows="3"></textarea></div>
+      <button class="btn btn-primary btn-block" id="modal-submit-rating">Submit Rating</button>
+    `);
+    const rowsHost = overlay.querySelector("#modal-rating-rows");
+    rowsHost.innerHTML = cats.map((c) => `
+      <div class="rating-category-row">
+        <span>${labels[c]}</span>
+        <div class="stars-input" data-cat="${c}">${[1,2,3,4,5].map((n) => `<span data-n="${n}">★</span>`).join("")}</div>
+      </div>`).join("");
+    rowsHost.querySelectorAll(".stars-input").forEach((row) => {
+      row.querySelectorAll("span").forEach((star) => {
+        star.addEventListener("click", () => {
+          const n = Number(star.dataset.n);
+          values[row.dataset.cat] = n;
+          row.querySelectorAll("span").forEach((s) => s.classList.toggle("active", Number(s.dataset.n) <= n));
+        });
+      });
+    });
+    overlay.querySelector("#modal-submit-rating").addEventListener("click", async () => {
+      if (Object.values(values).some((v) => v === 0)) return toast("Please rate every category.", "error");
+      try {
+        await submitRating(booking, "company", values, overlay.querySelector("#modal-rating-comment").value.trim());
+        toast("Rating submitted!", "success");
+        overlay.remove();
+      } catch (err) {
+        toast(err.message === "ALREADY_RATED" ? "Already rated." : "Something went wrong.", "error");
+      }
+    });
+  }
+</script>
+</body>
+</html>
