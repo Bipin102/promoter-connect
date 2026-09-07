@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "light");}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Promoter Connect — Built by a Promoter, for a Promoter</title>
 <meta name="description" content="Promoter Connect helps event companies find and confirm promoters within 1 hour, with live event check-ins and two-way ratings." />
-<link rel="icon" href="data:," />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/main.css" />
@@ -35,10 +35,6 @@
           <a href="/auth/signup.html?role=company" class="btn btn-urgent btn-lg">🔥 Get Promoters Now</a>
           <a href="/auth/signup.html?role=promoter" class="btn btn-secondary btn-lg">Find A Gig</a>
         </div>
-        <form id="hero-search" class="search-bar mt-24" style="max-width:480px;">
-          <input type="text" id="hero-search-input" placeholder="🔍 Search events — e.g. Nike, Mumbai, Brand Activation..." />
-          <button type="submit" class="btn btn-secondary">Search</button>
-        </form>
         <p class="text-dim mt-16" style="font-size:13px;">Built by a Promoter, for a Promoter.</p>
       </div>
 
@@ -171,7 +167,7 @@
           <div class="flow-step"><span class="dot" style="background:var(--text-faint);"></span>Late, Unconfirmed Hiring</div>
         </div>
       </div>
-      <div class="card" style="border-color:rgba(255,46,147,0.4);">
+      <div class="card" style="border-color:color-mix(in srgb, var(--pink) 40%, var(--border));">
         <h3 class="mb-16 text-gradient">Promoter Connect</h3>
         <div class="flow-steps" style="flex-direction:column;align-items:stretch;">
           <div class="flow-step"><span class="dot" style="background:var(--pink);"></span>Post Requirement</div>
@@ -203,12 +199,6 @@
 <script type="module">
   import { mountLayout } from "/js/layout.js";
   mountLayout();
-
-  document.getElementById("hero-search").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const q = document.getElementById("hero-search-input").value.trim();
-    window.location.href = `/promoter/jobs.html${q ? `?q=${encodeURIComponent(q)}` : ""}`;
-  });
 
   // Purely decorative animated demo tracker on the hero (not connected to Firestore).
   let secondsLeft = 43 * 60 + 27;

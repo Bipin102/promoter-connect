@@ -1,5 +1,41 @@
 /* ============ DESIGN TOKENS ============ */
+/* Light is the default (professional, job-portal-style); dark is an explicit
+   opt-in via the toggle in js/layout.js, which stamps data-theme on <html>. */
 :root {
+  --bg: #f4f6f9;
+  --bg-alt: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --border: #dde3ec;
+  --text: #12151c;
+  --text-dim: #565f6f;
+  --text-faint: #8a93a3;
+
+  --pink: #2557eb;
+  --pink-soft: #3b6ff2;
+  --purple: #4338ca;
+  --purple-soft: #6355e0;
+  --cyan: #0891b2;
+  --green: #15803d;
+  --amber: #b45309;
+  --red: #dc2626;
+  --urgent: #ea580c;
+  --urgent-2: #dc2626;
+
+  --grad-primary: linear-gradient(135deg, var(--pink), var(--purple));
+  --grad-glow: radial-gradient(circle, color-mix(in srgb, var(--pink) 14%, transparent), transparent 70%);
+
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --shadow-glow: 0 0 40px color-mix(in srgb, var(--pink) 12%, transparent);
+  --shadow-card: 0 1px 2px rgba(16,24,40,0.04), 0 4px 14px rgba(16,24,40,0.07);
+  --glow-opacity: 0.18;
+
+  --font: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] {
   --bg: #08080f;
   --bg-alt: #0e0e1a;
   --surface: #12121f;
@@ -9,25 +45,20 @@
   --text-dim: #a6a6c1;
   --text-faint: #6b6b8a;
 
-  --pink: #ff2e93;
-  --pink-soft: #ff6fb8;
-  --purple: #8b5cf6;
-  --purple-soft: #a78bfa;
+  --pink: #5b9dff;
+  --pink-soft: #8fbcff;
+  --purple: #9089fa;
+  --purple-soft: #b3adfc;
   --cyan: #22d3ee;
   --green: #34d399;
   --amber: #fbbf24;
   --red: #f87171;
+  --urgent: #ff3d3d;
+  --urgent-2: #ff2e93;
 
-  --grad-primary: linear-gradient(135deg, var(--pink), var(--purple));
-  --grad-glow: radial-gradient(circle, rgba(255,46,147,0.35), transparent 70%);
-
-  --radius-sm: 10px;
-  --radius: 16px;
-  --radius-lg: 24px;
-  --shadow-glow: 0 0 40px rgba(255,46,147,0.15);
+  --shadow-glow: 0 0 40px color-mix(in srgb, var(--pink) 18%, transparent);
   --shadow-card: 0 8px 30px rgba(0,0,0,0.35);
-
-  --font: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --glow-opacity: 0.5;
 }
 
 * { box-sizing: border-box; }
@@ -62,13 +93,13 @@ input, select, textarea { font-family: inherit; }
 }
 
 .glow-blob {
-  position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.5; pointer-events: none; z-index: 0;
+  position: absolute; border-radius: 50%; filter: blur(60px); opacity: var(--glow-opacity); pointer-events: none; z-index: 0;
 }
 
 /* ============ NAVBAR ============ */
 .pc-navbar {
   position: sticky; top: 0; z-index: 500;
-  background: rgba(8,8,15,0.75); backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg-alt) 85%, transparent); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
 .pc-navbar-inner {
@@ -78,7 +109,7 @@ input, select, textarea { font-family: inherit; }
 .pc-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
 .pc-logo-mark {
   width: 34px; height: 34px; border-radius: 50%; background: var(--grad-primary);
-  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #0a0a12;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff;
 }
 .pc-nav-links { display: flex; align-items: center; gap: 26px; }
 .pc-nav-links a { font-size: 14px; color: var(--text-dim); font-weight: 500; transition: color .15s; }
@@ -109,26 +140,26 @@ input, select, textarea { font-family: inherit; }
   transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease; white-space: nowrap;
 }
 .btn:active { transform: scale(0.97); }
-.btn-primary { background: var(--grad-primary); color: #fff; box-shadow: 0 6px 24px rgba(255,46,147,0.35); }
-.btn-primary:hover { box-shadow: 0 10px 30px rgba(255,46,147,0.5); }
+.btn-primary { background: var(--grad-primary); color: #fff; box-shadow: 0 6px 20px color-mix(in srgb, var(--pink) 35%, transparent); }
+.btn-primary:hover { box-shadow: 0 10px 26px color-mix(in srgb, var(--pink) 45%, transparent); }
 .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { border-color: var(--purple-soft); }
 .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
 .btn-ghost:hover { color: var(--text); }
 .btn-urgent {
-  background: linear-gradient(135deg, #ff3d3d, var(--pink)); color: #fff;
-  box-shadow: 0 6px 24px rgba(255,61,61,0.4);
+  background: linear-gradient(135deg, var(--urgent), var(--urgent-2)); color: #fff;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--urgent) 40%, transparent);
   animation: pulse-urgent 2.2s infinite;
 }
-.btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+.btn-danger { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); }
 .btn-block { width: 100%; }
 .btn-sm { padding: 8px 16px; font-size: 13px; }
 .btn-lg { padding: 16px 32px; font-size: 16px; }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; animation: none; }
 
 @keyframes pulse-urgent {
-  0%, 100% { box-shadow: 0 6px 24px rgba(255,61,61,0.4); }
-  50% { box-shadow: 0 6px 34px rgba(255,61,61,0.7); }
+  0%, 100% { box-shadow: 0 6px 20px color-mix(in srgb, var(--urgent) 40%, transparent); }
+  50% { box-shadow: 0 6px 30px color-mix(in srgb, var(--urgent) 65%, transparent); }
 }
 
 /* ============ FORMS ============ */
@@ -149,8 +180,8 @@ input, select, textarea { font-family: inherit; }
   padding: 18px; cursor: pointer; transition: border-color .15s, background .15s; position: relative;
 }
 .radio-card input { position: absolute; opacity: 0; }
-.radio-card.selected { border-color: var(--pink); background: rgba(255,46,147,0.06); }
-.radio-card.urgent.selected { border-color: #ff3d3d; background: rgba(255,61,61,0.08); }
+.radio-card.selected { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 6%, transparent); }
+.radio-card.urgent.selected { border-color: var(--urgent); background: color-mix(in srgb, var(--urgent) 8%, transparent); }
 .radio-card h4 { margin-bottom: 4px; }
 .radio-card p { font-size: 13px; color: var(--text-dim); }
 
@@ -158,8 +189,8 @@ input, select, textarea { font-family: inherit; }
 .auth-shell {
   min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;
   background:
-    radial-gradient(circle at 15% 10%, rgba(255,46,147,0.18), transparent 40%),
-    radial-gradient(circle at 85% 90%, rgba(139,92,246,0.18), transparent 40%),
+    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--pink) 12%, transparent), transparent 40%),
+    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--purple) 12%, transparent), transparent 40%),
     var(--bg);
 }
 .auth-card {
@@ -172,7 +203,7 @@ input, select, textarea { font-family: inherit; }
 .auth-switch { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-dim); }
 .auth-switch a { color: var(--pink-soft); font-weight: 600; }
 .auth-error {
-  background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #ffb4b4;
+  background: color-mix(in srgb, var(--red) 12%, transparent); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); color: var(--red);
   padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none;
 }
 .auth-error.show { display: block; }
