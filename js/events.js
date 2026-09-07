@@ -17,6 +17,7 @@ export async function postEvent(companyId, data) {
     startTime: data.startTime,
     endTime: data.endTime,
     location: data.location,
+    locationGeo: data.locationGeo || null, // optional {lat,lng} captured at posting time, powers reachability matching
     positionsRequired: Number(data.positionsRequired) || 1,
     positionsFilled: 0,
     genderReq: data.genderReq || "",

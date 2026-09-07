@@ -19,6 +19,7 @@ export function jobCardHTML(ev, { showActions = true } = {}) {
       <span>📅 ${fmtDate(ev.date)}</span>
       <span>🕐 ${ev.startTime}–${ev.endTime}</span>
     </div>
+    ${ev._distanceLabel ? `<div class="job-card-distance">${ev._distanceLabel}${ev._reachable ? " · ✅ Reachable within 1hr" : ""}</div>` : ""}
     ${isUrgent ? `<div class="job-card-countdown" data-deadline="${ev.urgentDeadlineMs || ""}" data-status="${ev.status}">⏱️ calculating...</div>` : ""}
     <div class="job-card-footer">
       <span class="job-card-payment">₹${Number(ev.paymentAmount || 0).toLocaleString("en-IN")}</span>

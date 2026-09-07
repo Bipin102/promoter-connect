@@ -79,6 +79,7 @@
 .job-card-payment { font-size: 18px; font-weight: 800; color: var(--green); }
 .job-card-positions { font-size: 12px; color: var(--pink); font-weight: 600; }
 .job-card-countdown { font-size: 12px; color: var(--urgent-2); font-weight: 700; }
+.job-card-distance { font-size: 12px; color: var(--cyan); font-weight: 600; }
 
 /* ============ URGENT FULFILLMENT TRACKER ============ */
 .tracker {

@@ -39,7 +39,12 @@
     </div>
     <div class="field-row">
       <div class="field"><label>Event Category</label><input type="text" id="category" placeholder="e.g. Brand Activation" /></div>
-      <div class="field"><label>Location</label><input type="text" id="location" required placeholder="e.g. BKC, Mumbai" /></div>
+      <div class="field">
+        <label>Location</label>
+        <input type="text" id="location" required placeholder="e.g. BKC, Mumbai" />
+        <button type="button" class="btn btn-ghost btn-sm mt-8" id="use-location-btn">📍 Use Current Location for Venue</button>
+        <p class="field-hint" id="location-geo-status"></p>
+      </div>
     </div>
     <div class="field-row">
       <div class="field"><label>Event Date</label><input type="date" id="date" required /></div>
@@ -82,9 +87,27 @@
   import { postEvent } from "/js/events.js";
   import { updateCompany, getCompany } from "/js/db.js";
   import { toast } from "/js/ui.js";
+  import { getCurrentLocation } from "/js/geo.js";
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
+
+  let locationGeo = null;
+  document.getElementById("use-location-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("use-location-btn");
+    const status = document.getElementById("location-geo-status");
+    btn.disabled = true; btn.textContent = "Getting location...";
+    try {
+      locationGeo = await getCurrentLocation();
+      status.textContent = "✅ Venue GPS captured — urgent jobs can now show promoters a distance/travel estimate.";
+      status.style.color = "var(--green)";
+    } catch (err) {
+      status.textContent = err.message;
+      status.style.color = "var(--red)";
+    } finally {
+      btn.disabled = false; btn.textContent = "📍 Use Current Location for Venue";
+    }
+  });
 
   let hiringType = "normal";
   document.querySelectorAll(".radio-card").forEach((card) => {
@@ -109,6 +132,7 @@
         brand: document.getElementById("brand").value.trim(),
         category: document.getElementById("category").value.trim(),
         location: document.getElementById("location").value.trim(),
+        locationGeo,
         date: document.getElementById("date").value,
         startTime: document.getElementById("startTime").value,
         endTime: document.getElementById("endTime").value,

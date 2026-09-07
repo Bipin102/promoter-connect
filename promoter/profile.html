@@ -65,6 +65,17 @@
         <div id="rep-preview" class="text-dim" style="font-size:14px;">Save your profile to see your public preview.</div>
       </div>
 
+      <div class="card mb-24">
+        <h3 class="mb-8">📍 Location for Urgent Matching</h3>
+        <p class="text-dim mb-16" style="font-size:13px;">
+          Share your location so Promoter Connect can show you (and prioritize you for) urgent
+          🔥 1-hour requirements that are actually reachable from where you are — not just
+          ones matching your listed city.
+        </p>
+        <div id="location-status" class="text-dim mb-16" style="font-size:13px;">Not shared yet.</div>
+        <button type="button" class="btn btn-secondary btn-block" id="share-location-btn">📍 Share My Current Location</button>
+      </div>
+
       <div class="card">
         <div class="flex-between mb-16">
           <h3>Portfolio</h3>
@@ -87,6 +98,7 @@
   import { getPromoter, updatePromoter, addPortfolioImage, listPortfolio, removePortfolioImage } from "/js/db.js";
   import { uploadImage } from "/js/storage.js";
   import { toast, stars, badgeList, escapeHTML } from "/js/ui.js";
+  import { getCurrentLocation } from "/js/geo.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
@@ -94,11 +106,38 @@
   let promoter = await getPromoter(user.uid);
   fillForm(promoter);
   renderReputation(promoter);
+  renderLocationStatus(promoter);
   await loadGallery();
 
   if (new URLSearchParams(location.search).get("onboarding")) {
     toast("Welcome! Complete your profile so companies can discover you.", "info", 5000);
   }
+
+  function renderLocationStatus(p) {
+    const el = document.getElementById("location-status");
+    if (p.location?.lat != null) {
+      const updated = p.location.updatedAt?.toDate ? p.location.updatedAt.toDate().toLocaleString() : "recently";
+      el.innerHTML = `✅ Location shared (updated ${updated}).`;
+    } else {
+      el.textContent = "Not shared yet — urgent job matching will use your listed city only.";
+    }
+  }
+
+  document.getElementById("share-location-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("share-location-btn");
+    btn.disabled = true; btn.textContent = "Requesting location...";
+    try {
+      const coords = await getCurrentLocation();
+      await updatePromoter(user.uid, { location: { ...coords, updatedAt: new Date() } });
+      promoter = { ...promoter, location: { ...coords, updatedAt: new Date() } };
+      renderLocationStatus(promoter);
+      toast("Location shared — you'll now see reachable urgent gigs first.", "success");
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "📍 Share My Current Location";
+    }
+  });
 
   function fillForm(p) {
     document.getElementById("fullName").value = p.fullName || "";

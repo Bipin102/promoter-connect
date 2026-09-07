@@ -128,6 +128,7 @@ storage.rules               Storage security rules
 | `notifications.js` | Firestore-backed notification inbox + bell dropdown, real-time via `onSnapshot`. |
 | `storage.js` | Image upload helper with type/size validation. |
 | `render.js` | Shared job-card markup + live countdown ticking. |
+| `geo.js` | GPS capture (`navigator.geolocation`) + haversine-distance-based "reachable within 1 hour" estimate, used to match promoters to nearby urgent gigs. |
 | `ui.js` | Toasts, modals, confirm dialogs, star rendering, badge logic, mobile bottom nav. |
 | `layout.js` | Injects the shared navbar/footer and reacts to auth state. |
 
@@ -169,6 +170,18 @@ tracker with real state:
   atomically. Badges (`✓ Verified`, `⭐ Highly Rated`, `🔥 Top Promoter`, `⚡ Quick
   Responder`, `🎯/🏆 event-count badges`) are all computed live from these real
   numbers in `js/ui.js` — never hardcoded.
+
+## Location-Based Matching
+
+On `/promoter/profile.html`, a promoter can click **📍 Share My Current Location** to save
+GPS coordinates to their profile (`promoters/{uid}.location`). When a company optionally
+captures the venue's GPS while posting an event (**📍 Use Current Location for Venue** on
+`/company/post-event.html`, saved as `events/{id}.locationGeo`), the jobs page shows each
+promoter a distance + estimated travel time, and a **"Only show gigs I can reach within 1
+hour"** filter. Distance uses the haversine formula and an assumed average urban speed
+(25 km/h) — it's an estimate, not real turn-by-turn routing (that would need a paid
+Directions/Distance Matrix API), but it's enough to keep urgent matching honest about
+actual reachability instead of just comparing city names.
 
 ## Known MVP Limitations (documented, not hidden)
 

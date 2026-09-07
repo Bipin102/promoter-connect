@@ -63,6 +63,7 @@
   import { listRatingsFor } from "/js/ratings.js";
   import { jobCardHTML, tickCountdowns } from "/js/render.js";
   import { stars, fmtDate, escapeHTML } from "/js/ui.js";
+  import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
@@ -75,6 +76,14 @@
   ]);
   const reconciled = await Promise.all(allEvents.map(reconcileUrgentWindow));
   const urgent = reconciled.filter((e) => e.hiringType === "urgent" && e.status === "open");
+  if (promoter.location?.lat != null) {
+    urgent.forEach((e) => {
+      if (e.locationGeo) {
+        e._distanceLabel = distanceLabel(promoter.location, e.locationGeo);
+        e._reachable = isReachableWithinHour(promoter.location, e.locationGeo);
+      }
+    });
+  }
 
   const upcoming = bookings.filter((b) => ["booked", "on_the_way", "checked_in", "active"].includes(b.status));
   const completed = bookings.filter((b) => b.status === "completed");

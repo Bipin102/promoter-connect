@@ -35,6 +35,14 @@
     <button class="btn btn-secondary" id="f-apply">Apply Filters</button>
   </div>
 
+  <div class="field mb-16" id="reach-filter-field" style="display:flex;align-items:center;gap:10px;">
+    <input type="checkbox" id="f-reachable" style="width:auto;" />
+    <label for="f-reachable" style="margin:0;">📍 Only show gigs I can reach within 1 hour</label>
+  </div>
+  <p class="field-hint mb-16 hidden" id="no-location-hint">
+    Share your location on your <a href="/promoter/profile.html" style="color:var(--pink);">profile</a> to use this filter.
+  </p>
+
   <div id="results" class="card-grid cols-2"></div>
   <div id="empty" class="empty-state hidden"><div class="empty-state-icon">🫥</div>No jobs match your filters right now.</div>
 </div>
@@ -49,6 +57,7 @@
   import { bookPosition, applyToEvent, BOOKING_ERRORS } from "/js/booking.js";
   import { jobCardHTML, tickCountdowns } from "/js/render.js";
   import { toast, openModal, escapeHTML, fmtDate } from "/js/ui.js";
+  import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
@@ -56,6 +65,10 @@
 
   const presetQuery = new URLSearchParams(location.search).get("q");
   if (presetQuery) document.getElementById("f-keyword").value = presetQuery;
+
+  const hasPromoterLocation = promoter.location?.lat != null;
+  document.getElementById("no-location-hint").classList.toggle("hidden", hasPromoterLocation);
+  if (!hasPromoterLocation) document.getElementById("f-reachable").disabled = true;
 
   const resultsEl = document.getElementById("results");
   const emptyEl = document.getElementById("empty");
@@ -73,6 +86,18 @@
     let events = await listOpenEvents(filters);
     events = await Promise.all(events.map(reconcileUrgentWindow));
     events = events.filter((e) => e.status === "open" || e.status === "fulfilled");
+
+    if (hasPromoterLocation) {
+      events.forEach((e) => {
+        if (e.locationGeo) {
+          e._distanceLabel = distanceLabel(promoter.location, e.locationGeo);
+          e._reachable = isReachableWithinHour(promoter.location, e.locationGeo);
+        }
+      });
+      if (document.getElementById("f-reachable").checked) {
+        events = events.filter((e) => e._reachable === true);
+      }
+    }
     events.sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"));
 
     emptyEl.classList.toggle("hidden", events.length > 0);
@@ -138,6 +163,7 @@
   document.getElementById("f-apply").addEventListener("click", load);
   document.getElementById("f-search").addEventListener("click", load);
   document.getElementById("f-keyword").addEventListener("keydown", (e) => { if (e.key === "Enter") load(); });
+  document.getElementById("f-reachable").addEventListener("change", load);
   load();
   setInterval(() => tickCountdowns(resultsEl), 1000);
 </script>
