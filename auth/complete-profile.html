@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "light");}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sign Up — Promoter Connect</title>
+<title>Finish Setting Up — Promoter Connect</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
@@ -13,12 +13,12 @@
 <div class="auth-shell">
   <div class="auth-card">
     <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" /> Promoter Connect</a>
-    <h1 class="auth-title mt-16">Create your account</h1>
-    <p class="auth-sub">Built by a Promoter, for a Promoter.</p>
+    <h1 class="auth-title mt-16">Let's finish setting up your account</h1>
+    <p class="auth-sub">We found your login, but your profile wasn't fully created last time. Just pick your role below and you're good to go.</p>
 
     <div class="auth-error" id="err"></div>
 
-    <form id="signup-form">
+    <form id="complete-form">
       <div class="field">
         <label>I am a...</label>
         <div class="radio-card-group">
@@ -39,35 +39,35 @@
         <label id="name-label">Full Name</label>
         <input type="text" id="name" required placeholder="Your name" />
       </div>
-      <div class="field">
-        <label>Email</label>
-        <input type="email" id="email" required placeholder="you@example.com" />
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Password</label>
-          <input type="password" id="password" required minlength="6" placeholder="Min. 6 characters" />
-        </div>
-        <div class="field">
-          <label>Confirm Password</label>
-          <input type="password" id="confirm" required minlength="6" placeholder="Repeat password" />
-        </div>
-      </div>
 
-      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create Account</button>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Continue</button>
     </form>
 
-    <p class="auth-switch">Already have an account? <a href="/auth/login.html">Log in</a></p>
+    <p class="auth-switch"><a href="#" id="logout-link">Not you? Log out</a></p>
   </div>
 </div>
 
 <script type="module">
-  import { signup } from "/js/auth.js";
+  import { auth } from "/js/firebase-init.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { createUserDocs, getUserDoc, logout } from "/js/auth.js";
+  import { toast } from "/js/ui.js";
   import { mountLayout } from "/js/layout.js";
   mountLayout();
 
-  const params = new URLSearchParams(location.search);
-  const preselect = params.get("role");
+  let currentUser = null;
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "/auth/login.html"; return; }
+    const existingProfile = await getUserDoc(user.uid);
+    if (existingProfile) {
+      window.location.href = existingProfile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
+      return;
+    }
+    currentUser = user;
+    if (user.displayName) document.getElementById("name").value = user.displayName;
+  });
+
+  document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
 
   const cards = document.querySelectorAll(".radio-card");
   cards.forEach((card) => {
@@ -79,43 +79,29 @@
         card.dataset.role === "company" ? "Company Name" : "Full Name";
     });
   });
-  if (preselect === "promoter" || preselect === "company") {
-    document.querySelector(`.radio-card[data-role="${preselect}"]`)?.click();
-  }
 
   const errBox = document.getElementById("err");
   function showError(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
 
-  document.getElementById("signup-form").addEventListener("submit", async (e) => {
+  document.getElementById("complete-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     errBox.classList.remove("show");
+    if (!currentUser) return showError("Still confirming your session — please wait a moment and try again.");
     const role = document.querySelector('input[name="role"]:checked')?.value;
     const name = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-    const confirm = document.getElementById("confirm").value;
-
     if (!role) return showError("Please select whether you're a Promoter or an Event Company.");
-    if (password !== confirm) return showError("Passwords do not match.");
 
     const btn = document.getElementById("submit-btn");
-    btn.disabled = true; btn.textContent = "Creating account...";
+    btn.disabled = true; btn.textContent = "Setting up...";
     try {
-      await signup({ email, password, role, name });
+      await createUserDocs(currentUser, { role, name, email: currentUser.email });
+      toast("Account set up! Complete your profile so you can be discovered.", "success");
       window.location.href = role === "company" ? "/company/profile.html?onboarding=1" : "/promoter/profile.html?onboarding=1";
     } catch (err) {
-      showError(mapAuthError(err));
-      btn.disabled = false; btn.textContent = "Create Account";
+      showError(err.message || "Something went wrong. Please try again.");
+      btn.disabled = false; btn.textContent = "Continue";
     }
   });
-
-  function mapAuthError(err) {
-    const code = err.code || "";
-    if (code.includes("email-already-in-use")) return "An account with this email already exists.";
-    if (code.includes("weak-password")) return "Password is too weak — use at least 6 characters.";
-    if (code.includes("invalid-email")) return "Please enter a valid email address.";
-    return err.message || "Something went wrong. Please try again.";
-  }
 </script>
 </body>
 </html>

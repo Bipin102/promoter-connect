@@ -5,12 +5,15 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-export async function signup({ email, password, role, name }) {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  await updateProfile(cred.user, { displayName: name });
-
-  await setDoc(doc(db, "users", cred.user.uid), {
-    uid: cred.user.uid,
+/**
+ * Creates the Firestore side of an account (users/{uid} + promoters/{uid} or
+ * companies/{uid}). Split out from signup() so the same logic can also repair
+ * an account whose Auth user exists but whose profile docs never got written
+ * (e.g. a signup that was interrupted mid-way by a transient error).
+ */
+export async function createUserDocs(user, { role, name, email }) {
+  await setDoc(doc(db, "users", user.uid), {
+    uid: user.uid,
     email,
     role, // 'promoter' | 'company'
     displayName: name,
@@ -19,8 +22,8 @@ export async function signup({ email, password, role, name }) {
   });
 
   if (role === "promoter") {
-    await setDoc(doc(db, "promoters", cred.user.uid), {
-      uid: cred.user.uid,
+    await setDoc(doc(db, "promoters", user.uid), {
+      uid: user.uid,
       fullName: name,
       email,
       photoURL: "",
@@ -33,8 +36,8 @@ export async function signup({ email, password, role, name }) {
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
   } else {
-    await setDoc(doc(db, "companies", cred.user.uid), {
-      uid: cred.user.uid,
+    await setDoc(doc(db, "companies", user.uid), {
+      uid: user.uid,
       companyName: name,
       email,
       logoURL: "",
@@ -44,6 +47,12 @@ export async function signup({ email, password, role, name }) {
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
   }
+}
+
+export async function signup({ email, password, role, name }) {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  await updateProfile(cred.user, { displayName: name });
+  await createUserDocs(cred.user, { role, name, email });
   return cred.user;
 }
 
@@ -78,7 +87,10 @@ export function requireAuth(requiredRole = null) {
       }
       const profile = await getUserDoc(user.uid);
       if (!profile) {
-        window.location.href = "/auth/login.html";
+        // Auth account exists but the Firestore profile never got written (an
+        // interrupted signup) — send them to finish it instead of bouncing
+        // back to login, which would just loop forever.
+        window.location.href = "/auth/complete-profile.html";
         return;
       }
       if (requiredRole && profile.role !== requiredRole) {

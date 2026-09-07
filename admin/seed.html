@@ -28,6 +28,8 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { db, serverTimestamp } from "/js/firebase-init.js";
+  import { mountLayout } from "/js/layout.js";
+  mountLayout();
   import { doc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   await requireAuth();

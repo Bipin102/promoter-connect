@@ -12,7 +12,7 @@
 <body>
 <div class="auth-shell">
   <div class="auth-card">
-    <a href="/index.html" class="pc-logo"><span class="pc-logo-mark">PC</span> Promoter Connect</a>
+    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" /> Promoter Connect</a>
     <h1 class="auth-title mt-16">Welcome back</h1>
     <p class="auth-sub">Log in to your dashboard.</p>
 
@@ -41,6 +41,8 @@
 <script type="module">
   import { login, resetPassword, getUserDoc } from "/js/auth.js";
   import { toast } from "/js/ui.js";
+  import { mountLayout } from "/js/layout.js";
+  mountLayout();
 
   const errBox = document.getElementById("err");
   function showError(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
@@ -55,7 +57,11 @@
     try {
       const user = await login(email, password);
       const profile = await getUserDoc(user.uid);
-      window.location.href = profile?.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
+      if (!profile) {
+        window.location.href = "/auth/complete-profile.html";
+        return;
+      }
+      window.location.href = profile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
     } catch (err) {
       showError(mapAuthError(err));
       btn.disabled = false; btn.textContent = "Log In";
