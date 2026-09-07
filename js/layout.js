@@ -2,20 +2,22 @@ import { watchAuth, logout } from "./auth.js";
 import { mountNotificationBell } from "./notifications.js";
 import { initMobileNav } from "./ui.js";
 
-const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="%232557eb"/><stop offset="1" stop-color="%234338ca"/>
-  </linearGradient></defs>
-  <circle cx="32" cy="32" r="32" fill="url(%23g)"/>
-  <text x="32" y="41" font-family="Arial, sans-serif" font-weight="800" font-size="26" fill="%23ffffff" text-anchor="middle">PC</text>
-</svg>`;
-
 function ensureFavicon() {
-  document.querySelectorAll('link[rel="icon"]').forEach((el) => el.remove());
-  const link = document.createElement("link");
-  link.rel = "icon";
-  link.href = `data:image/svg+xml,${FAVICON_SVG.replace(/\s+/g, " ")}`;
-  document.head.appendChild(link);
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((el) => el.remove());
+
+  [["32x32", "/assets/icon-32.png"], ["64x64", "/assets/icon-64.png"]].forEach(([sizes, href]) => {
+    const icon = document.createElement("link");
+    icon.rel = "icon";
+    icon.type = "image/png";
+    icon.sizes = sizes;
+    icon.href = href;
+    document.head.appendChild(icon);
+  });
+
+  const apple = document.createElement("link");
+  apple.rel = "apple-touch-icon";
+  apple.href = "/assets/icon-180.png";
+  document.head.appendChild(apple);
 }
 
 const NAV_LINKS = `
@@ -66,7 +68,7 @@ export function mountLayout({ role = null } = {}) {
       <nav class="pc-navbar">
         <div class="pc-navbar-inner">
           <a href="/index.html" class="pc-logo">
-            <span class="pc-logo-mark">PC</span> Promoter Connect
+            <img src="/assets/icon-64.png" class="pc-logo-mark" alt="" /> Promoter Connect
           </a>
           <div class="pc-nav-links">${NAV_LINKS}</div>
           <form class="pc-nav-search" id="pc-nav-search-form">
@@ -106,7 +108,7 @@ export function mountLayout({ role = null } = {}) {
         <div class="container">
           <div class="pc-footer-inner">
             <div>
-              <div class="pc-logo mb-8"><span class="pc-logo-mark">PC</span> Promoter Connect</div>
+              <div class="pc-logo mb-8"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" /> Promoter Connect</div>
               <p class="text-dim" style="max-width:260px;font-size:13px;">Built by a Promoter, for a Promoter. Events × People, smart matching.</p>
             </div>
             <div class="pc-footer-links">
