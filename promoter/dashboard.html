@@ -62,7 +62,7 @@
   import { listPromoterBookings } from "/js/booking.js";
   import { listRatingsFor } from "/js/ratings.js";
   import { jobCardHTML, tickCountdowns } from "/js/render.js";
-  import { stars, fmtDate, escapeHTML } from "/js/ui.js";
+  import { stars, fmtDate, escapeHTML, fmtEventCountdown, eventStartDate } from "/js/ui.js";
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
   mountLayout({ role: "promoter" });
@@ -112,11 +112,23 @@
           <div>
             <strong>${escapeHTML(b.eventName)}</strong>
             <p class="text-dim" style="font-size:12px;">📍 ${escapeHTML(b.location)} · 📅 ${fmtDate(b.date)}</p>
+            ${["booked","on_the_way"].includes(b.status) ? `<p class="mt-8" style="font-size:12px;font-weight:700;color:var(--pink);" data-event-start="${eventStartDate(b.date, b.startTime)?.getTime() || ""}">⏱️ —</p>` : ""}
           </div>
         </div>
         <span class="status-pill status-${b.status}">${b.status.replace("_", " ").toUpperCase()}</span>
       </a>`).join("")
     : `<div class="empty-state"><div class="empty-state-icon">📅</div>No upcoming events yet. <a href="/promoter/jobs.html" style="color:var(--pink-soft)">Discover gigs →</a></div>`;
+
+  function tickBookingCountdowns() {
+    document.querySelectorAll("[data-event-start]").forEach((el) => {
+      const target = Number(el.dataset.eventStart);
+      if (!target) { el.textContent = ""; return; }
+      const label = fmtEventCountdown(target - Date.now());
+      el.textContent = label ? `⏱️ Starts in ${label}` : "🟢 Event started";
+    });
+  }
+  tickBookingCountdowns();
+  setInterval(tickBookingCountdowns, 1000);
 
   document.getElementById("ratings-preview").innerHTML = ratings.length
     ? `<div class="mb-16">${stars(promoter.ratingAvg || 0, promoter.ratingCount || 0)}</div>` +

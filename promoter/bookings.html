@@ -31,7 +31,7 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { listPromoterBookings } from "/js/booking.js";
-  import { fmtDate, escapeHTML } from "/js/ui.js";
+  import { fmtDate, escapeHTML, fmtEventCountdown, eventStartDate } from "/js/ui.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
@@ -54,6 +54,7 @@
               <strong>${escapeHTML(b.eventName)}</strong>
               <p class="text-dim" style="font-size:12px;">📍 ${escapeHTML(b.location)} · 📅 ${fmtDate(b.date)} · 🕐 ${b.startTime}–${b.endTime}</p>
               <p class="text-dim" style="font-size:12px;">🎟️ ${b.bookingCode}</p>
+              ${["booked","on_the_way"].includes(b.status) ? `<p class="mt-8" style="font-size:12px;font-weight:700;color:var(--pink);" data-event-start="${eventStartDate(b.date, b.startTime)?.getTime() || ""}">⏱️ —</p>` : ""}
             </div>
           </div>
           <div class="text-center">
@@ -62,7 +63,18 @@
           </div>
         </a>`).join("")
       : `<div class="empty-state"><div class="empty-state-icon">📭</div>Nothing here yet.</div>`;
+    tickBookingCountdowns();
   }
+
+  function tickBookingCountdowns() {
+    document.querySelectorAll("[data-event-start]").forEach((el) => {
+      const target = Number(el.dataset.eventStart);
+      if (!target) { el.textContent = ""; return; }
+      const label = fmtEventCountdown(target - Date.now());
+      el.textContent = label ? `⏱️ Starts in ${label}` : "🟢 Event started";
+    });
+  }
+  setInterval(tickBookingCountdowns, 1000);
 
   document.querySelectorAll(".pc-tab").forEach((tab) => {
     tab.addEventListener("click", () => {

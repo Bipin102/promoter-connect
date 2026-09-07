@@ -89,6 +89,27 @@ export function fmtCountdown(ms) {
   return `${m}:${s}`;
 }
 
+/** Formats a longer-range countdown (to an event's start time) as "2d 4h 12m" / "4h 12m" / "12m 34s". */
+export function fmtEventCountdown(ms) {
+  if (ms <= 0) return null; // event has started
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  if (days > 0) return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+}
+
+/** Builds a JS Date from a booking/event's "YYYY-MM-DD" date + "HH:MM" startTime, or null if incomplete. */
+export function eventStartDate(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  const d = new Date(`${dateStr}T${timeStr}:00`);
+  return isNaN(d) ? null : d;
+}
+
 export function escapeHTML(str = "") {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }

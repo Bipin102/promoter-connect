@@ -25,14 +25,36 @@
   import { getBooking, updateBookingStatus, cancelBooking } from "/js/booking.js";
   import { submitCheckIn, listCheckInsForBooking } from "/js/checkin.js";
   import { hasRated, submitRating, categoriesFor } from "/js/ratings.js";
-  import { toast, confirmDialog, fmtDate, escapeHTML } from "/js/ui.js";
+  import { toast, confirmDialog, fmtDate, escapeHTML, fmtEventCountdown, eventStartDate } from "/js/ui.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
   const bookingId = new URLSearchParams(location.search).get("id");
   const content = document.getElementById("content");
+  let countdownInterval = null;
 
   if (!bookingId) { content.innerHTML = `<div class="empty-state">Booking not found.</div>`; throw new Error("no id"); }
+
+  function startCountdown(booking) {
+    clearInterval(countdownInterval);
+    const el = document.getElementById("event-countdown");
+    if (!el) return;
+    const target = eventStartDate(booking.date, booking.startTime);
+    if (!target) { el.textContent = "—"; return; }
+    const tick = () => {
+      const ms = target.getTime() - Date.now();
+      const label = fmtEventCountdown(ms);
+      if (!label) {
+        el.textContent = "Event has started";
+        document.getElementById("countdown-card")?.classList.add("text-dim");
+        clearInterval(countdownInterval);
+      } else {
+        el.textContent = label;
+      }
+    };
+    tick();
+    countdownInterval = setInterval(tick, 1000);
+  }
 
   async function render() {
     const booking = await getBooking(bookingId);
@@ -62,6 +84,12 @@
           ${["booked","on_the_way"].includes(booking.status) ? `<button class="btn btn-danger" id="cancel-btn">Cancel Booking</button>` : ""}
         </div>
       </div>
+
+      ${["booked","on_the_way"].includes(booking.status) ? `
+      <div class="card mb-24 text-center" id="countdown-card">
+        <p class="text-dim mb-8" style="font-size:13px;">⏱️ Time Until Event Starts</p>
+        <div id="event-countdown" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;">--</div>
+      </div>` : ""}
 
       ${["booked","on_the_way"].includes(booking.status) ? `
       <div class="card mb-24" style="border-color:rgba(248,113,113,0.4);">
@@ -121,6 +149,7 @@
       }
     });
 
+    if (["booked","on_the_way"].includes(booking.status)) startCountdown(booking);
     if (booking.status === "completed" && !alreadyRated) mountRatingForm(booking);
   }
 
