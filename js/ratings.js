@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  doc, getDoc, setDoc, runTransaction, collection, getDocs, query, where, orderBy
+  doc, getDoc, setDoc, runTransaction, collection, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
 
@@ -72,6 +72,9 @@ export async function hasRated(bookingId, fromRole) {
 }
 
 export async function listRatingsFor(toId) {
-  const snap = await getDocs(query(collection(db, "ratings"), where("toId", "==", toId), orderBy("createdAt", "desc")));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sorted client-side so this doesn't depend on a manually-created composite index
+  // (where(toId) + orderBy(createdAt) on different fields needs one otherwise).
+  const snap = await getDocs(query(collection(db, "ratings"), where("toId", "==", toId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 }

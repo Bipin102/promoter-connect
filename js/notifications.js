@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  collection, addDoc, query, where, orderBy, limit, onSnapshot, doc, updateDoc
+  collection, addDoc, query, where, onSnapshot, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export async function pushNotification(userId, { type, title, message, link = "" }) {
@@ -10,13 +10,17 @@ export async function pushNotification(userId, { type, title, message, link = ""
 }
 
 export function watchNotifications(userId, cb) {
-  const q = query(
-    collection(db, "notifications"),
-    where("userId", "==", userId),
-    orderBy("createdAt", "desc"),
-    limit(30)
-  );
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+  // No orderBy/limit in the query itself — where(userId) + orderBy(createdAt) on a
+  // different field would need a manually-created composite index otherwise. Sorted
+  // and capped client-side instead once the snapshot arrives.
+  const q = query(collection(db, "notifications"), where("userId", "==", userId));
+  return onSnapshot(q, (snap) => {
+    const items = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+      .slice(0, 30);
+    cb(items);
+  });
 }
 
 export async function markNotificationRead(id) {

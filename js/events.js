@@ -74,8 +74,11 @@ export async function listOpenEvents(filters = {}) {
 }
 
 export async function listCompanyEvents(companyId) {
-  const snap = await getDocs(query(collection(db, "events"), where("companyId", "==", companyId), orderBy("createdAt", "desc")));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sorted client-side so this doesn't depend on a manually-created composite index
+  // (where(companyId) + orderBy(createdAt) on different fields needs one otherwise).
+  const snap = await getDocs(query(collection(db, "events"), where("companyId", "==", companyId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 }
 
 /** Client-side correction for urgent jobs whose 1-hour window elapsed without full fulfillment.

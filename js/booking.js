@@ -1,7 +1,7 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
   doc, runTransaction, collection, addDoc, setDoc, getDocs, getDoc, query, where,
-  orderBy, updateDoc, onSnapshot
+  updateDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
 
@@ -168,8 +168,15 @@ export async function respondToApplication(applicationId, decision, promoter) {
 }
 
 export async function listPromoterBookings(promoterId) {
-  const snap = await getDocs(query(collection(db, "bookings"), where("promoterId", "==", promoterId), orderBy("bookedAt", "desc")));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sorted client-side (not via a Firestore orderBy) so this never depends on a
+  // manually-created composite index — where(promoterId) + orderBy(bookedAt) on
+  // different fields would otherwise fail at query time until one exists.
+  const snap = await getDocs(query(collection(db, "bookings"), where("promoterId", "==", promoterId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byTimestampDesc("bookedAt"));
+}
+
+function byTimestampDesc(field) {
+  return (a, b) => (b[field]?.toMillis?.() || 0) - (a[field]?.toMillis?.() || 0);
 }
 
 export async function listCompanyBookingsForEvent(eventId) {
