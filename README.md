@@ -15,7 +15,8 @@ Live flow: **Post → Match → Confirm → Check-In → Complete → Rate**
 - **Frontend:** Vanilla HTML5 / CSS3 / JavaScript (ES modules, no build step)
 - **Auth:** Firebase Authentication (email/password, role-based)
 - **Database:** Firebase Firestore
-- **Storage:** Firebase Storage (profile photos, portfolios, live check-in photos)
+- **Storage:** Supabase Storage (profile photos, portfolios, live check-in photos) —
+  not Firebase Storage; see the note in [Set Up Supabase](#2-set-up-supabase-for-image-storage) below.
 - **Hosting:** Vercel (static site, zero build config)
 
 No framework, no bundler — every page is a standalone `.html` file that imports
@@ -30,20 +31,46 @@ shared logic from `/js/*.js` via native `<script type="module">`.
 2. **Build → Authentication → Sign-in method** → enable **Email/Password**.
 3. **Build → Firestore Database** → **Create database** (start in production mode —
    the rules below lock it down properly).
-4. **Build → Storage** → **Get started** (production mode is fine here too).
-5. **Project settings → General → Your apps → Add app → Web (`</>`)** → register
+4. **Project settings → General → Your apps → Add app → Web (`</>`)** → register
    the app (nickname anything, e.g. "promoter-connect-web") → copy the `firebaseConfig` object.
-6. Paste those 6 values into **[`js/firebase-config.js`](js/firebase-config.js)**.
+5. Paste those 6 values into **[`js/firebase-config.js`](js/firebase-config.js)**.
    The site shows a big pink banner on every page until you do this.
-7. Deploy the security rules:
-   - Firestore: **Firestore Database → Rules** tab → paste the contents of
-     [`firestore.rules`](firestore.rules) → **Publish**.
-   - Storage: **Storage → Rules** tab → paste the contents of
-     [`storage.rules`](storage.rules) → **Publish**.
+6. Deploy the security rules: **Firestore Database → Rules** tab → paste the
+   contents of [`firestore.rules`](firestore.rules) → **Publish**.
 
-That's it — no Cloud Functions, no Admin SDK, no service account needed for the app itself.
+That's it for Firebase — no Cloud Functions, no Admin SDK, no service account needed.
 
-## 2. Run Locally
+## 2. Set Up Supabase (for image storage)
+
+Image uploads (profile photos, portfolios, live check-in photos) run on
+**Supabase Storage**, not Firebase Storage. Why: as of late 2024, Firebase
+Storage requires linking a Google Cloud **Blaze** billing account just to
+*enable* it at all (even though usage stays inside a free-tier quota
+afterward) — and if that billing account ever ends up flagged/delinquent by
+Google (which can happen even to a brand-new account, unrelated to actual
+usage or payment history), Storage becomes uncreatable with no clear fix on
+your end. Supabase's Storage free tier needs no card at all, so it sidesteps
+that failure mode entirely. Auth and the database are unaffected — those stay
+on Firebase.
+
+1. Go to [supabase.com](https://supabase.com) → sign up (free) → **New project**
+   (any name/region; the database password is never used — this app only uses
+   Supabase's Storage product, not its Postgres database).
+2. Once it finishes provisioning: left sidebar → **Storage** → **New bucket** →
+   name it exactly `promoter-connect-uploads` → toggle **Public bucket** ON → **Create**.
+3. Click into that bucket → **Policies** tab → **New policy** → "For full
+   customization" → allow **all operations** (SELECT, INSERT, UPDATE, DELETE)
+   for roles `anon` and `authenticated`, with `true` for both the USING and
+   WITH CHECK expressions → **Save**.
+   (This app authenticates every upload via Firebase, not Supabase — there's no
+   Supabase-recognized user to scope a tighter policy to, so this trusts any
+   signed-in-to-Firebase client the same way a couple of other things in this
+   MVP do; see Known Limitations below.)
+4. **Settings (gear icon) → API** → copy the **Project URL** and the **`anon`
+   `public`** key → paste them into
+   **[`js/supabase-config.js`](js/supabase-config.js)**.
+
+## 3. Run Locally
 
 Any static file server works (ES module imports need `http://`, not `file://`):
 
@@ -54,7 +81,7 @@ npx serve .
 
 Open the printed URL, e.g. `http://localhost:3000/index.html`.
 
-## 3. Seed Demo Data (optional but recommended)
+## 4. Seed Demo Data (optional but recommended)
 
 1. Sign up for any account (promoter or company) so you're authenticated.
 2. Visit `/admin/seed.html` and click **Run Seed**.
@@ -63,7 +90,7 @@ Open the printed URL, e.g. `http://localhost:3000/index.html`.
    normal/urgent) so `/promoter/jobs.html` and `/company/find-promoters.html` aren't empty.
    Demo docs are tagged `isDemo: true` and use `demo_*` ids.
 
-## 4. Deploy to Vercel with your custom domain
+## 5. Deploy to Vercel with your custom domain
 
 ```bash
 vercel                # first deploy, link/create the project
@@ -110,15 +137,15 @@ admin/
 js/                         All application logic (see below)
 css/                        main.css (tokens/layout), components.css, dashboard.css
 firestore.rules             Firestore security rules
-storage.rules               Storage security rules
 ```
 
 ### `js/` modules
 
 | File | Responsibility |
 |---|---|
-| `firebase-config.js` | **Your credentials go here.** |
-| `firebase-init.js` | Initializes the Firebase app once; exports `auth`, `db`, `storage`. |
+| `firebase-config.js` | **Your Firebase credentials go here.** |
+| `firebase-init.js` | Initializes the Firebase app once; exports `auth`, `db`. |
+| `supabase-config.js` | **Your Supabase credentials go here** (image storage only). |
 | `auth.js` | Signup (creates `users` + `promoters`/`companies` docs), login, logout, `requireAuth()` route guard. |
 | `db.js` | Promoter/company profile CRUD, portfolio subcollection, promoter directory search. |
 | `events.js` | Post/list/watch events, the honest client-side 1-hour window reconciliation. |
@@ -126,7 +153,7 @@ storage.rules               Storage security rules
 | `checkin.js` | Live check-in: photo upload, geolocation capture, timestamp, booking status flip. |
 | `ratings.js` | Two-way ratings, eligibility checks (completed bookings only, one per side), running average. |
 | `notifications.js` | Firestore-backed notification inbox + bell dropdown, real-time via `onSnapshot`. |
-| `storage.js` | Image upload helper with type/size validation. |
+| `storage.js` | Image upload helper (Supabase Storage) with type/size validation. |
 | `render.js` | Shared job-card markup + live countdown ticking. |
 | `geo.js` | GPS capture (`navigator.geolocation`) + haversine-distance-based "reachable within 1 hour" estimate, used to match promoters to nearby urgent gigs. |
 | `ui.js` | Toasts, modals, confirm dialogs, star rendering, badge logic, mobile bottom nav. |
@@ -196,11 +223,13 @@ handled with documented tradeoffs instead:
   inbox (Firestore rules allow any signed-in user to `create` a notification row,
   since there's no server to do it centrally). Tighten this with Cloud Functions
   if you need it airtight.
-- **Live check-in photo storage rules** are keyed by `bookingId`, not by uid — any
-  signed-in user can write to a given `bookingId` path (there's no cheap way to
-  cross-check Firestore booking ownership from Storage rules without a paid
-  Blaze-plan `firestore.get()` call). Consider adding that check via the Blaze
-  plan in production.
+- **Image storage access is trust-based, not per-user-scoped**: the Supabase
+  bucket policy allows any client holding the public `anon` key to
+  read/write/delete objects — there's no Supabase-recognized identity to scope
+  a tighter policy to, since uploads are authenticated via Firebase instead.
+  Fine for this MVP (nothing sensitive is stored there — public profile/portfolio/
+  check-in photos), but a production build should proxy uploads through a small
+  server that verifies the caller's Firebase ID token before writing to Storage.
 
 ## Future Scope
 

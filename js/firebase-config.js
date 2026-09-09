@@ -7,9 +7,13 @@
  * 4. Enable these in the Firebase console:
  *    - Authentication → Sign-in method → Email/Password → Enable
  *    - Firestore Database → Create database (production mode)
- *    - Storage → Get started
- * 5. Deploy the security rules in /firestore.rules and /storage.rules
- *    (Firebase console → Firestore/Storage → Rules tab → paste contents → Publish).
+ * 5. Deploy the security rules in /firestore.rules
+ *    (Firebase console → Firestore Database → Rules tab → paste contents → Publish).
+ *
+ * (Image storage — profile photos, portfolios, live check-in photos — runs on
+ * Supabase Storage instead of Firebase Storage; see js/supabase-config.js.
+ * Firebase Storage now requires linking a billing account even to enable it at
+ * all, which was a blocker; this app doesn't need Firebase Storage for anything.)
  *
  * DO NOT commit real production secrets you consider sensitive to a public repo.
  * Firebase web config values are not secret in the traditional sense (they are

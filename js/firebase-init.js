@@ -6,14 +6,14 @@ import {
 import {
   getFirestore, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 
+// Image storage lives on Supabase (see js/storage.js + js/supabase-config.js),
+// not Firebase Storage — so no Storage SDK is initialized here.
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 export { serverTimestamp, onAuthStateChanged, signOut };
 
 export const isDemoConfig = firebaseConfig.apiKey === "YOUR_API_KEY";
