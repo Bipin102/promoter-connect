@@ -1,12 +1,44 @@
 /* ============ DESIGN TOKENS ============ */
-/* Light is the default (professional, job-portal-style); dark is an explicit
-   opt-in via the toggle in js/layout.js, which stamps data-theme on <html>. */
-:root {
+/* Dark is the flagship, default look — deep black / midnight-navy surfaces
+   with an electric blue → violet brand gradient (a subtle pink shows up only
+   as a third accent in glows/gradients, never as the primary hue). Light is
+   a fully-supported alternate via the navbar toggle, not an afterthought. */
+:root[data-theme="dark"], :root:not([data-theme]) {
+  --bg: #06060a;
+  --bg-alt: #0a0a11;
+  --surface: #0e0f18;
+  --surface-2: #14151f;
+  --border: #21222f;
+  --border-strong: #2c2e40;
+  --text: #f5f6fb;
+  --text-dim: #9a9db3;
+  --text-faint: #63657c;
+
+  --pink: #5b8cff;
+  --pink-soft: #8badff;
+  --purple: #8b6cf6;
+  --purple-soft: #ab97fa;
+  --accent-pink: #ec6fc2;
+  --cyan: #22d3ee;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --urgent: #ff5a3d;
+  --urgent-2: #ff3d81;
+
+  --shadow-glow: 0 0 60px color-mix(in srgb, var(--pink) 20%, transparent);
+  --shadow-card: 0 1px 1px rgba(0,0,0,0.4), 0 16px 40px rgba(0,0,0,0.5);
+  --shadow-lift: 0 1px 1px rgba(0,0,0,0.4), 0 24px 56px rgba(0,0,0,0.6);
+  --glow-opacity: 0.55;
+}
+
+:root[data-theme="light"] {
   --bg: #f4f6f9;
   --bg-alt: #ffffff;
   --surface: #ffffff;
   --surface-2: #eef1f6;
   --border: #dde3ec;
+  --border-strong: #c7d0dd;
   --text: #12151c;
   --text-dim: #565f6f;
   --text-faint: #8a93a3;
@@ -15,6 +47,7 @@
   --pink-soft: #3b6ff2;
   --purple: #4338ca;
   --purple-soft: #6355e0;
+  --accent-pink: #db2777;
   --cyan: #0891b2;
   --green: #15803d;
   --amber: #b45309;
@@ -22,43 +55,28 @@
   --urgent: #ea580c;
   --urgent-2: #dc2626;
 
-  --grad-primary: linear-gradient(135deg, var(--pink), var(--purple));
-  --grad-glow: radial-gradient(circle, color-mix(in srgb, var(--pink) 14%, transparent), transparent 70%);
-
-  --radius-sm: 10px;
-  --radius: 16px;
-  --radius-lg: 24px;
   --shadow-glow: 0 0 40px color-mix(in srgb, var(--pink) 12%, transparent);
   --shadow-card: 0 1px 2px rgba(16,24,40,0.04), 0 4px 14px rgba(16,24,40,0.07);
+  --shadow-lift: 0 4px 8px rgba(16,24,40,0.06), 0 16px 32px rgba(16,24,40,0.1);
   --glow-opacity: 0.18;
-
-  --font: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-:root[data-theme="dark"] {
-  --bg: #08080f;
-  --bg-alt: #0e0e1a;
-  --surface: #12121f;
-  --surface-2: #171727;
-  --border: #23233a;
-  --text: #f2f2fa;
-  --text-dim: #a6a6c1;
-  --text-faint: #6b6b8a;
+:root {
+  --grad-primary: linear-gradient(135deg, var(--pink), var(--purple));
+  --grad-hero: linear-gradient(120deg, var(--pink) 0%, var(--purple) 55%, var(--accent-pink) 100%);
+  --grad-glow: radial-gradient(circle, color-mix(in srgb, var(--pink) 14%, transparent), transparent 70%);
 
-  --pink: #5b9dff;
-  --pink-soft: #8fbcff;
-  --purple: #9089fa;
-  --purple-soft: #b3adfc;
-  --cyan: #22d3ee;
-  --green: #34d399;
-  --amber: #fbbf24;
-  --red: #f87171;
-  --urgent: #ff3d3d;
-  --urgent-2: #ff2e93;
+  /* Spacing scale — new component CSS should use these; legacy inline styles
+     predate this and are left as-is rather than churned for churn's sake. */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
 
-  --shadow-glow: 0 0 40px color-mix(in srgb, var(--pink) 18%, transparent);
-  --shadow-card: 0 8px 30px rgba(0,0,0,0.35);
-  --glow-opacity: 0.5;
+  --radius-sm: 12px;
+  --radius: 18px;
+  --radius-lg: 26px;
+  --radius-full: 999px;
+
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -76,6 +94,7 @@ a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 ul { margin: 0; padding: 0; list-style: none; }
 h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.02em; }
+h1 { letter-spacing: -0.03em; }
 p { margin: 0; }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; }
@@ -97,31 +116,43 @@ input, select, textarea { font-family: inherit; }
 }
 
 /* ============ NAVBAR ============ */
+/* A floating, inset pill bar (Linear/Vercel-style) rather than a full-width
+   strip flush with the viewport edge. */
 .pc-navbar {
   position: sticky; top: 0; z-index: 500;
-  background: color-mix(in srgb, var(--bg-alt) 85%, transparent); backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
+  padding: 14px 20px 0;
 }
 .pc-navbar-inner {
-  max-width: 1180px; margin: 0 auto; padding: 14px 24px;
+  max-width: 1180px; margin: 0 auto; padding: 10px 20px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent); backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--border); border-radius: var(--radius-full);
+  box-shadow: var(--shadow-card);
 }
-.pc-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+.pc-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; letter-spacing: -0.01em; }
 .pc-logo-mark {
-  width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
 }
-.pc-nav-links { display: flex; align-items: center; gap: 26px; }
-.pc-nav-links a { font-size: 14px; color: var(--text-dim); font-weight: 500; transition: color .15s; }
-.pc-nav-links a:hover { color: var(--text); }
-.pc-nav-actions { display: flex; align-items: center; gap: 12px; }
+.pc-nav-links { display: flex; align-items: center; gap: 4px; }
+.pc-nav-links a {
+  font-size: 14px; color: var(--text-dim); font-weight: 500; transition: color .2s, background .2s;
+  padding: 8px 14px; border-radius: var(--radius-full); position: relative;
+}
+.pc-nav-links a:hover { color: var(--text); background: var(--surface-2); }
+.pc-nav-links a.active { color: var(--text); background: var(--surface-2); }
+.pc-nav-actions { display: flex; align-items: center; gap: 10px; }
 .pc-nav-toggle { display: none; background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; line-height: 1; padding: 6px; }
 .pc-nav-mobile {
-  display: none; max-height: 0; overflow: hidden; transition: max-height .25s ease;
-  border-top: 1px solid transparent;
+  display: none; max-height: 0; overflow: hidden; transition: max-height .3s cubic-bezier(0.16,1,0.3,1);
+  max-width: 1180px; margin: 0 auto;
 }
-.pc-nav-mobile.open { max-height: 420px; border-top-color: var(--border); }
-.pc-nav-mobile-links { display: flex; flex-direction: column; padding: 16px 24px 20px; gap: 4px; }
-.pc-nav-mobile-links a { padding: 10px 0; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+.pc-nav-mobile.open {
+  max-height: 420px; margin-top: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+}
+.pc-nav-mobile-links { display: flex; flex-direction: column; padding: 10px 20px 16px; gap: 2px; }
+.pc-nav-mobile-links a { padding: 12px 4px; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+.pc-nav-mobile-links a:last-child { border-bottom: none; }
 
 @media (max-width: 860px) {
   .pc-nav-links { display: none; }
@@ -135,17 +166,17 @@ input, select, textarea { font-family: inherit; }
 /* ============ BUTTONS ============ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px 22px; border-radius: 999px; border: none; font-weight: 600; font-size: 14px;
-  transition: transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s cubic-bezier(0.16,1,0.3,1), opacity .15s ease, border-color .2s ease;
+  padding: 12px 22px; border-radius: var(--radius-full); border: none; font-weight: 600; font-size: 14px;
+  transition: transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s cubic-bezier(0.16,1,0.3,1), opacity .15s ease, border-color .2s ease, background .2s ease;
   white-space: nowrap;
 }
 .btn:active { transform: scale(0.97); }
 .btn-primary { background: var(--grad-primary); color: #fff; box-shadow: 0 6px 20px color-mix(in srgb, var(--pink) 35%, transparent); }
-.btn-primary:hover { box-shadow: 0 10px 26px color-mix(in srgb, var(--pink) 45%, transparent); transform: translateY(-1px); }
+.btn-primary:hover { box-shadow: 0 10px 30px color-mix(in srgb, var(--pink) 45%, transparent); transform: translateY(-1px); }
 .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-.btn-secondary:hover { border-color: var(--purple-soft); }
+.btn-secondary:hover { border-color: var(--border-strong); transform: translateY(-1px); }
 .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
-.btn-ghost:hover { color: var(--text); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
 .btn-urgent {
   background: linear-gradient(135deg, var(--urgent), var(--urgent-2)); color: #fff;
   box-shadow: 0 6px 20px color-mix(in srgb, var(--urgent) 40%, transparent);
@@ -168,9 +199,11 @@ input, select, textarea { font-family: inherit; }
 .field input, .field select, .field textarea {
   width: 100%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
   padding: 12px 14px; border-radius: var(--radius-sm); font-size: 14px; outline: none;
-  transition: border-color .15s;
+  transition: border-color .2s, box-shadow .2s;
 }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--pink); }
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--pink); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pink) 16%, transparent);
+}
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 640px) { .field-row { grid-template-columns: 1fr; } }
 .field-hint { font-size: 12px; color: var(--text-faint); margin-top: 5px; }
@@ -189,8 +222,9 @@ input, select, textarea { font-family: inherit; }
 .auth-shell {
   min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;
   background:
-    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--pink) 12%, transparent), transparent 40%),
-    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--purple) 12%, transparent), transparent 40%),
+    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--pink) 14%, transparent), transparent 42%),
+    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--purple) 14%, transparent), transparent 42%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent-pink) 6%, transparent), transparent 60%),
     var(--bg);
 }
 .auth-card {
@@ -223,6 +257,7 @@ input, select, textarea { font-family: inherit; }
 .mt-8{margin-top:8px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}.mt-32{margin-top:32px}
 .mb-8{margin-bottom:8px}.mb-16{margin-bottom:16px}.mb-24{margin-bottom:24px}
 .text-dim { color: var(--text-dim); }
+.text-faint { color: var(--text-faint); }
 .text-center { text-align: center; }
 .hidden { display: none !important; }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-faint); }
@@ -233,6 +268,20 @@ input, select, textarea { font-family: inherit; }
   border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Skeleton shimmer — an alternative to .loading-state for card-shaped content
+   (job/promoter grids) so the layout doesn't jump once real data arrives. */
+.skeleton {
+  border-radius: var(--radius); background: var(--surface);
+  border: 1px solid var(--border); overflow: hidden; position: relative;
+}
+.skeleton::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 6%, transparent), transparent);
+  transform: translateX(-100%); animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; } }
 
 body.has-bottom-nav { padding-bottom: 76px; }
 

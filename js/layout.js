@@ -36,11 +36,18 @@ function applyTheme(theme) {
 function mountThemeToggle() {
   const btn = document.getElementById("pc-theme-toggle");
   if (!btn) return;
-  const current = document.documentElement.getAttribute("data-theme") || "light";
+  const current = document.documentElement.getAttribute("data-theme") || "dark";
   btn.textContent = current === "dark" ? "☀️" : "🌙";
   btn.addEventListener("click", () => {
     const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
     applyTheme(next);
+  });
+}
+
+function markActiveLinks(container) {
+  container.querySelectorAll("a[href]").forEach((a) => {
+    if (a.getAttribute("href").includes("#")) return; // same-page anchors (How It Works, Features) never get "active"
+    if (new URL(a.href).pathname === location.pathname) a.classList.add("active");
   });
 }
 
@@ -89,6 +96,7 @@ export function mountLayout({ role = null } = {}) {
 
     mountThemeToggle();
     mountNavSearch();
+    markActiveLinks(navHost);
 
     const toggle = document.getElementById("pc-nav-toggle");
     const mobilePanel = document.getElementById("pc-nav-mobile");

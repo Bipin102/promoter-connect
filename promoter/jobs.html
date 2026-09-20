@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "light");}catch(e){}</script>
+<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Discover Gigs — Promoter Connect</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 <link rel="stylesheet" href="/css/dashboard.css" />
@@ -74,7 +74,13 @@
   const emptyEl = document.getElementById("empty");
 
   async function load() {
-    resultsEl.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
+    resultsEl.innerHTML = Array.from({ length: 4 }, () => `
+      <div class="skeleton" style="height:190px;padding:22px;">
+        <div style="width:60%;height:14px;background:var(--surface-2);border-radius:6px;margin-bottom:10px;"></div>
+        <div style="width:40%;height:12px;background:var(--surface-2);border-radius:6px;margin-bottom:20px;"></div>
+        <div style="width:80%;height:12px;background:var(--surface-2);border-radius:6px;margin-bottom:8px;"></div>
+        <div style="width:50%;height:12px;background:var(--surface-2);border-radius:6px;"></div>
+      </div>`).join("");
     const filters = {
       keyword: document.getElementById("f-keyword").value.trim(),
       hiringType: document.getElementById("f-type").value,
