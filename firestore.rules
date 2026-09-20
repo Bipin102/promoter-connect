@@ -38,7 +38,11 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if isSignedIn();
+      // Public read: job postings are meant to be discoverable before signup,
+      // like any job board — same as Naukri/LinkedIn Jobs. Nothing sensitive
+      // lives on an event doc (no contact info beyond what a company chose to
+      // publish). Every other collection stays signed-in-only.
+      allow read: if true;
       allow create: if isSignedIn() && request.resource.data.companyId == request.auth.uid;
       // The company that owns the event can fully edit it. Any other signed-in user
       // (a promoter, via the atomic booking transaction in js/booking.js) may only

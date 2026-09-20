@@ -114,6 +114,25 @@ export function escapeHTML(str = "") {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/** Fades/slides elements in as they scroll into view — a light, one-shot reveal, not a gimmick. */
+export function initScrollReveal(selector = "[data-reveal]") {
+  const els = document.querySelectorAll(selector);
+  if (!els.length) return;
+  if (!("IntersectionObserver" in window)) { els.forEach((el) => el.classList.add("revealed")); return; }
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("revealed");
+          io.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+  );
+  els.forEach((el) => io.observe(el));
+}
+
 export function initMobileNav(role) {
   if (window.innerWidth > 860) return;
   const nav = document.createElement("nav");

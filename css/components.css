@@ -1,13 +1,13 @@
 /* ============ CARDS ============ */
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 22px; transition: border-color .2s, transform .2s;
+  padding: 22px; transition: border-color .3s cubic-bezier(0.16,1,0.3,1), transform .3s cubic-bezier(0.16,1,0.3,1), box-shadow .3s cubic-bezier(0.16,1,0.3,1);
 }
 .card-glass {
   background: color-mix(in srgb, var(--surface-2) 65%, transparent); backdrop-filter: blur(16px);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 22px;
 }
-.card:hover { border-color: color-mix(in srgb, var(--pink) 35%, var(--border)); }
+.card:hover { border-color: color-mix(in srgb, var(--pink) 35%, var(--border)); transform: translateY(-3px); box-shadow: var(--shadow-card); }
 .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
@@ -59,7 +59,9 @@
 .job-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 22px; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;
+  transition: transform .3s cubic-bezier(0.16,1,0.3,1), box-shadow .3s cubic-bezier(0.16,1,0.3,1), border-color .3s ease;
 }
+.job-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-card); }
 .job-card.urgent {
   border-color: color-mix(in srgb, var(--urgent) 40%, var(--border));
   background: linear-gradient(180deg, color-mix(in srgb, var(--urgent) 7%, transparent), var(--surface) 40%);

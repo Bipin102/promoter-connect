@@ -39,21 +39,12 @@
       </div>
 
       <div style="flex:1;min-width:320px;">
-        <div class="tracker" id="hero-tracker">
-          <div class="tracker-head">
-            <span class="tracker-title">⚡ FINDING YOUR PROMOTERS</span>
-            <span class="status-pill status-open">LIVE DEMO</span>
+        <div class="card-glass" style="border-radius:var(--radius-lg);padding:26px;">
+          <div class="flex-between mb-16">
+            <span class="tracker-title" style="color:var(--text);font-size:14px;">🔥 Live Right Now</span>
+            <span class="text-dim" style="font-size:12px;">Real postings, updated live</span>
           </div>
-          <p class="text-dim" style="font-size:13px;margin-bottom:4px;">Cadbury Brand Activation · BKC, Mumbai</p>
-          <div class="flex-between mt-16">
-            <span style="font-size:14px;color:var(--text-dim);">Promoters Required: <strong style="color:var(--text)">5</strong></span>
-            <span class="tracker-timer" id="hero-timer">43:27</span>
-          </div>
-          <div class="tracker-progress-track"><div class="tracker-progress-fill" id="hero-fill" style="width:20%;"></div></div>
-          <div class="tracker-counts">
-            <span id="hero-count">1 / 5 Confirmed</span>
-            <span class="text-dim" style="font-weight:500;">⏱️ Time Remaining</span>
-          </div>
+          <div id="hero-jobs"><div class="loading-state"><div class="spinner"></div></div></div>
         </div>
       </div>
     </div>
@@ -61,7 +52,7 @@
 </header>
 
 <!-- ============ TARGET USERS STRIP ============ -->
-<section class="section" style="padding-top:0;padding-bottom:40px;">
+<section class="section" data-reveal style="padding-top:0;padding-bottom:40px;">
   <div class="container">
     <div class="card-grid cols-2">
       <div class="card">
@@ -77,7 +68,7 @@
 </section>
 
 <!-- ============ HOW IT WORKS ============ -->
-<section class="section" id="how-it-works">
+<section class="section" id="how-it-works" data-reveal>
   <div class="container">
     <span class="section-tag">How It Works</span>
     <h2 class="section-title">Post → Match → Confirm → Check-In → Complete → Rate</h2>
@@ -111,7 +102,7 @@
 </section>
 
 <!-- ============ WHY PROMOTER CONNECT ============ -->
-<section class="section" id="features" style="background:var(--bg-alt);">
+<section class="section" id="features" data-reveal style="background:var(--bg-alt);">
   <div class="container">
     <span class="section-tag">Why Promoter Connect</span>
     <h2 class="section-title" id="why">Designed around the way event hiring actually happens</h2>
@@ -151,7 +142,7 @@
 </section>
 
 <!-- ============ COMPARISON ============ -->
-<section class="section">
+<section class="section" data-reveal>
   <div class="container">
     <span class="section-tag">The Difference</span>
     <h2 class="section-title">Traditional Hiring vs. Promoter Connect</h2>
@@ -183,7 +174,7 @@
 </section>
 
 <!-- ============ CTA ============ -->
-<section class="section" style="background:var(--bg-alt);">
+<section class="section" data-reveal style="background:var(--bg-alt);">
   <div class="container text-center">
     <h2 class="section-title">From fragmented opportunities to one connected platform.</h2>
     <p class="section-sub" style="margin-left:auto;margin-right:auto;">Make event-work opportunities easier to discover, manage and trust.</p>
@@ -198,23 +189,47 @@
 
 <script type="module">
   import { mountLayout } from "/js/layout.js";
-  mountLayout();
+  import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
+  import { initScrollReveal, fmtDate, escapeHTML } from "/js/ui.js";
 
-  // Purely decorative animated demo tracker on the hero (not connected to Firestore).
-  let secondsLeft = 43 * 60 + 27;
-  let confirmed = 1;
-  const total = 5;
-  setInterval(() => {
-    secondsLeft = Math.max(0, secondsLeft - 1);
-    const m = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
-    const s = String(secondsLeft % 60).padStart(2, "0");
-    document.getElementById("hero-timer").textContent = `${m}:${s}`;
-    if (secondsLeft % 240 === 0 && confirmed < total) {
-      confirmed++;
-      document.getElementById("hero-count").textContent = `${confirmed} / ${total} Confirmed`;
-      document.getElementById("hero-fill").style.width = `${(confirmed / total) * 100}%`;
+  mountLayout();
+  initScrollReveal();
+  loadHeroJobs();
+
+  async function loadHeroJobs() {
+    const host = document.getElementById("hero-jobs");
+    try {
+      let events = await listOpenEvents();
+      events = events.filter((e) => !e.isDemo);
+      events = await Promise.all(events.map(reconcileUrgentWindow));
+      events = events.filter((e) => e.status === "open");
+      events.sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"));
+      events = events.slice(0, 3);
+
+      host.innerHTML = events.length
+        ? events.map((e) => {
+            const remaining = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
+            return `
+            <a href="/auth/signup.html?role=promoter" class="promoter-row mb-16" style="justify-content:space-between;">
+              <div>
+                <strong style="font-size:14px;">${escapeHTML(e.eventName)}</strong>
+                <p class="text-dim" style="font-size:12px;margin-top:2px;">📍 ${escapeHTML(e.location)} · 📅 ${fmtDate(e.date)}</p>
+              </div>
+              <div class="text-center">
+                ${e.hiringType === "urgent" ? `<span class="badge badge-urgent">🔥 URGENT</span>` : `<span class="badge badge-events">Normal</span>`}
+                <div class="text-dim mt-8" style="font-size:12px;">${remaining} open</div>
+              </div>
+            </a>`;
+          }).join("")
+        : `<div class="empty-state" style="padding:30px 10px;">
+             <div class="empty-state-icon">🕊️</div>
+             No open requirements right now — check back soon, or
+             <a href="/auth/signup.html?role=company" style="color:var(--pink);">post the first one</a>.
+           </div>`;
+    } catch (err) {
+      host.innerHTML = `<p class="text-dim" style="font-size:13px;">Couldn't load live postings right now.</p>`;
     }
-  }, 1000);
+  }
 </script>
 </body>
 </html>
