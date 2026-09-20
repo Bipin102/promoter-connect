@@ -22,7 +22,7 @@
  *    "anon public" key → paste them below.
  */
 export const supabaseConfig = {
-  url: "YOUR_SUPABASE_PROJECT_URL",
-  anonKey: "YOUR_SUPABASE_ANON_KEY",
+  url: "https://dxojufxanzpornvkxitg.supabase.co",
+  anonKey: "sb_publishable_57HuK7MzYgBqBmRmyR43pQ_4IsUYAKc",
   bucket: "promoter-connect-uploads",
 };
