@@ -24,19 +24,19 @@
         <div class="radio-card-group">
           <label class="radio-card" data-role="promoter">
             <input type="radio" name="role" value="promoter" />
-            <h4>🎤 Promoter</h4>
-            <p>Discover gigs, book urgent positions, build your reputation.</p>
+            <h4>Promoter</h4>
+            <p>I want to find gigs and get booked for events.</p>
           </label>
           <label class="radio-card" data-role="company">
             <input type="radio" name="role" value="company" />
-            <h4>🏢 Event Company</h4>
-            <p>Post events and get promoters confirmed within 1 hour.</p>
+            <h4>Event company</h4>
+            <p>I hire promoters for events, activations or store promotions.</p>
           </label>
         </div>
       </div>
 
       <div class="field">
-        <label id="name-label">Full Name</label>
+        <label id="name-label">Full name</label>
         <input type="text" id="name" required placeholder="Your name" />
       </div>
 
@@ -76,7 +76,7 @@
       card.classList.add("selected");
       card.querySelector("input").checked = true;
       document.getElementById("name-label").textContent =
-        card.dataset.role === "company" ? "Company Name" : "Full Name";
+        card.dataset.role === "company" ? "Company name" : "Full name";
     });
   });
 

@@ -7,7 +7,7 @@
   background: color-mix(in srgb, var(--surface-2) 65%, transparent); backdrop-filter: blur(16px);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 22px;
 }
-.card:hover { border-color: color-mix(in srgb, var(--pink) 35%, var(--border)); transform: translateY(-3px); box-shadow: var(--shadow-card); }
+a.card:hover { border-color: var(--border-strong); }
 .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
@@ -161,8 +161,8 @@
 
 /* ============ THEME TOGGLE ============ */
 .pc-theme-toggle {
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 50%;
-  width: 40px; height: 40px; font-size: 17px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  width: 36px; height: 36px; font-size: 17px; display: flex; align-items: center; justify-content: center;
   color: var(--text);
 }
 
@@ -197,19 +197,19 @@
   padding: 14px 20px; border-radius: 999px; font-size: 14px; outline: none; transition: border-color .15s;
 }
 .search-bar input:focus { border-color: var(--pink); }
-.search-bar .btn { border-radius: 999px; padding: 12px 26px; }
+.search-bar .btn { padding: 12px 26px; }
 @media (max-width: 560px) { .search-bar { flex-direction: column; } .search-bar .btn { width: 100%; } }
 
 /* Compact search bar embedded in the navbar (top-right), Naukri-style persistent search */
 .pc-nav-search { display: flex; align-items: center; gap: 0; }
 .pc-nav-search input {
   width: 220px; background: var(--surface-2); border: 1px solid var(--border); border-right: none; color: var(--text);
-  padding: 9px 14px; border-radius: 999px 0 0 999px; font-size: 13px; outline: none; transition: border-color .15s, width .2s;
+  padding: 9px 14px; border-radius: var(--radius-sm) 0 0 var(--radius-sm); font-size: 13px; outline: none; transition: border-color .15s, width .2s;
 }
 .pc-nav-search input:focus { border-color: var(--pink); width: 260px; }
 .pc-nav-search button {
   background: var(--pink); border: 1px solid var(--pink); color: #fff; padding: 9px 16px;
-  border-radius: 0 999px 999px 0; font-size: 14px; display: flex; align-items: center;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 14px; display: flex; align-items: center;
 }
 @media (max-width: 1080px) { .pc-nav-search { display: none; } }
 

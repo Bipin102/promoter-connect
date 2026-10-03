@@ -31,7 +31,7 @@
         <span></span>
         <a href="#" id="forgot-link" style="font-size:13px;color:var(--pink-soft);font-weight:600;">Forgot password?</a>
       </div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Log In</button>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Log in</button>
     </form>
 
     <p class="auth-switch">New to Promoter Connect? <a href="/auth/signup.html">Create an account</a></p>
@@ -64,7 +64,7 @@
       window.location.href = profile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
     } catch (err) {
       showError(mapAuthError(err));
-      btn.disabled = false; btn.textContent = "Log In";
+      btn.disabled = false; btn.textContent = "Log in";
     }
   });
 
