@@ -16,7 +16,7 @@
 <body>
 <main class="auth-shell" id="main">
   <div class="auth-card">
-    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
+    <a href="/" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
     <h1 class="auth-title">Log in</h1>
     <p class="auth-sub">Welcome back.</p>
 
@@ -35,7 +35,7 @@
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Log in</button>
     </form>
 
-    <p class="auth-switch">New here? <a href="/auth/signup.html">Create an account</a></p>
+    <p class="auth-switch">New here? <a href="/auth/signup">Create an account</a></p>
   </div>
 </main>
 
@@ -58,8 +58,8 @@
     try {
       const user = await login(email, password);
       const profile = await getUserDoc(user.uid);
-      if (!profile) location.href = "/auth/complete-profile.html";
-      else location.href = profile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
+      if (!profile) location.href = "/auth/complete-profile";
+      else location.href = profile.role === "company" ? "/company/dashboard" : "/promoter/dashboard";
     } catch (err) {
       showError(authErrorMessage(err));
       btn.disabled = false; btn.textContent = "Log in";

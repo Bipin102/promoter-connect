@@ -24,7 +24,7 @@
       <p>Everything you've posted.</p>
     </div>
     <div class="page-actions">
-      <a href="/company/post-event.html" class="btn btn-primary">Post an event</a>
+      <a href="/company/post-event" class="btn btn-primary">Post an event</a>
     </div>
   </div>
 
@@ -52,7 +52,7 @@
   const events = await Promise.all((await listCompanyEvents(user.uid)).map(reconcileUrgentWindow));
 
   const eventRow = (e) => `
-    <a href="/company/event.html?id=${encodeURIComponent(e.id)}" class="list-row">
+    <a href="/company/event?id=${encodeURIComponent(e.id)}" class="list-row">
       <div class="list-row-main">
         <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}</div>
         <div class="list-row-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
@@ -69,7 +69,7 @@
       : events.filter((e) => e.status === tab);
     document.getElementById("list").innerHTML = items.length
       ? `<div class="list">${items.map(eventRow).join("")}</div>`
-      : `<div class="empty-state boxed">${events.length ? "No events in this list." : `You haven't posted anything yet. <a class="link" href="/company/post-event.html">Post an event</a>`}</div>`;
+      : `<div class="empty-state boxed">${events.length ? "No events in this list." : `You haven't posted anything yet. <a class="link" href="/company/post-event">Post an event</a>`}</div>`;
   });
 </script>
 </body>

@@ -83,7 +83,7 @@ export function bookingRowHTML(b) {
   const upcoming = ["booked", "on_the_way"].includes(b.status);
   const start = eventStartDate(b.date, b.startTime)?.getTime() || "";
   return `
-    <a href="/promoter/event.html?id=${encodeURIComponent(b.id)}" class="list-row">
+    <a href="/promoter/event?id=${encodeURIComponent(b.id)}" class="list-row">
       <div class="list-row-main">
         <div class="list-row-title">${escapeHTML(b.eventName)}</div>
         <div class="list-row-sub">${fmtDate(b.date)} · ${fmtTimeRange(b.startTime, b.endTime)} · ${escapeHTML(b.location)}</div>

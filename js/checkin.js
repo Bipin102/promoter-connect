@@ -36,7 +36,7 @@ export async function submitCheckIn(booking, photoFile) {
     type: "checked_in",
     title: "Promoter arrived",
     message: `${booking.promoterName} checked in at ${booking.eventName}.`,
-    link: `/company/event.html?id=${booking.eventId}`,
+    link: `/company/event?id=${booking.eventId}`,
   });
 
   return checkInRef.id;

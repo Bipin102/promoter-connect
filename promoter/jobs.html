@@ -51,7 +51,7 @@
     </label>
   </div>
   <p class="field-hint mb-16 hidden" id="no-location-hint">
-    To use the distance filter, share your location on your <a class="link" href="/promoter/profile.html">profile</a>.
+    To use the distance filter, share your location on your <a class="link" href="/promoter/profile">profile</a>.
   </p>
 
   <div id="results" class="card-grid cols-2"></div>
@@ -200,7 +200,7 @@
       </dl>
       <div class="pc-modal-actions">
         <button class="btn btn-secondary" data-close>Keep browsing</button>
-        <a href="/promoter/event.html?id=${encodeURIComponent(result.bookingId)}" class="btn btn-primary">View booking</a>
+        <a href="/promoter/event?id=${encodeURIComponent(result.bookingId)}" class="btn btn-primary">View booking</a>
       </div>`);
   }
 

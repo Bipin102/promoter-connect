@@ -30,8 +30,8 @@
         with a photo when they reach the venue.
       </p>
       <div class="hero-actions">
-        <a href="/auth/signup.html?role=company" class="btn btn-primary btn-lg">I need promoters</a>
-        <a href="/auth/signup.html?role=promoter" class="btn btn-secondary btn-lg">I'm a promoter</a>
+        <a href="/auth/signup?role=company" class="btn btn-primary btn-lg">I need promoters</a>
+        <a href="/auth/signup?role=promoter" class="btn btn-secondary btn-lg">I'm a promoter</a>
       </div>
       <p class="hero-note">Built by a promoter, for promoters.</p>
     </div>
@@ -127,8 +127,8 @@
     <h2>Got an event coming up?</h2>
     <p>Sign up, post it, and see who's available.</p>
     <div class="hero-actions">
-      <a href="/auth/signup.html?role=company" class="btn btn-primary btn-lg">Post an event</a>
-      <a href="/auth/signup.html?role=promoter" class="btn btn-secondary btn-lg">Join as a promoter</a>
+      <a href="/auth/signup?role=company" class="btn btn-primary btn-lg">Post an event</a>
+      <a href="/auth/signup?role=promoter" class="btn btn-secondary btn-lg">Join as a promoter</a>
     </div>
   </div>
 </section>
@@ -157,7 +157,7 @@
         ? events.map((e) => {
             const remaining = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
             return `
-            <a href="/auth/signup.html?role=promoter" class="hero-job">
+            <a href="/auth/signup?role=promoter" class="hero-job">
               <div>
                 <strong>${escapeHTML(e.eventName)}</strong>
                 <p>${escapeHTML(e.location)} · ${fmtDate(e.date)}</p>
@@ -171,7 +171,7 @@
         : `<div class="hero-empty">
              <p>Nothing open at the moment.</p>
              <p>Postings appear here as soon as a company publishes one.</p>
-             <a href="/auth/signup.html?role=company">Post a requirement</a>
+             <a href="/auth/signup?role=company">Post a requirement</a>
            </div>`;
     } catch (err) {
       host.innerHTML = `<p class="hero-empty text-dim">Couldn't load postings right now. Try refreshing the page.</p>`;

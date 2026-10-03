@@ -18,7 +18,7 @@
 <div id="pc-navbar"></div>
 
 <main class="page-shell narrow" id="main">
-  <a href="/promoter/bookings.html" class="back-link" id="back-link"></a>
+  <a href="/promoter/bookings" class="back-link" id="back-link"></a>
   <div id="content"><div class="loading-state"><div class="spinner"></div></div></div>
 </main>
 
@@ -45,7 +45,7 @@
   let countdownTimer = null;
 
   const notFound = () => {
-    content.innerHTML = `<div class="empty-state boxed"><h3>Booking not found</h3>It may have been removed. <a class="link" href="/promoter/bookings.html">Back to bookings</a></div>`;
+    content.innerHTML = `<div class="empty-state boxed"><h3>Booking not found</h3>It may have been removed. <a class="link" href="/promoter/bookings">Back to bookings</a></div>`;
   };
 
   async function render() {
@@ -72,7 +72,7 @@
           <dt>Booking code</dt><dd><code>${escapeHTML(booking.bookingCode)}</code></dd>
           <dt>Payment</dt><dd>${fmtMoney(booking.paymentAmount)} · ${statusPill(booking.paymentStatus)}</dd>
         </dl>
-        ${event?.companyId ? `<p class="mt-16 text-sm"><a class="link" href="/shared/company-profile.html?id=${encodeURIComponent(event.companyId)}">View company profile</a></p>` : ""}
+        ${event?.companyId ? `<p class="mt-16 text-sm"><a class="link" href="/shared/company-profile?id=${encodeURIComponent(event.companyId)}">View company profile</a></p>` : ""}
         ${upcoming ? `
         <div class="event-actions">
           ${booking.status === "booked" ? `<button class="btn btn-secondary" id="otw-btn">I'm on my way</button>` : ""}

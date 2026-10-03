@@ -191,7 +191,7 @@
       const eventId = await postEvent(user.uid, data);
       const company = await getCompany(user.uid);
       await updateCompany(user.uid, { eventsPosted: (company.eventsPosted || 0) + 1 });
-      location.href = `/company/event.html?id=${encodeURIComponent(eventId)}&posted=1`;
+      location.href = `/company/event?id=${encodeURIComponent(eventId)}&posted=1`;
     } catch {
       toast("Couldn't post the event. Please try again.", "error");
       submitBtn.disabled = false; submitBtn.textContent = label;

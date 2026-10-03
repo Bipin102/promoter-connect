@@ -41,7 +41,7 @@ on Supabase's free tier instead.
 
 ### Admins
 
-The admin dashboard (`/admin/dashboard.html`) shows sign-up numbers and the user
+The admin dashboard (`/admin/dashboard`) shows sign-up numbers and the user
 list. To make someone an admin, copy their User UID from Authentication → Users
 and create a Firestore document at `admins/{uid}` (any fields). Admins see an
 "Admin" link in the navbar.
@@ -54,7 +54,7 @@ Any static server works (modules need `http://`, not `file://`):
 python3 -m http.server 5500
 ```
 
-`/admin/seed.html` writes sample data (ids start with `demo_`) for testing. It's
+`/admin/seed` writes sample data (ids start with `demo_`) for testing. It's
 admin-only, and the sample ratings are made up, so don't run it against the
 production database.
 

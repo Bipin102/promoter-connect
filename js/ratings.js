@@ -68,7 +68,7 @@ export async function submitRating(booking, fromRole, categories, comment = "") 
     type: "new_rating",
     title: "New rating",
     message: `You were rated ${overall.toFixed(1)} out of 5 for ${booking.eventName}.`,
-    link: toRole === "promoter" ? "/promoter/ratings.html" : "/company/dashboard.html",
+    link: toRole === "promoter" ? "/promoter/ratings" : "/company/dashboard",
   });
 }
 

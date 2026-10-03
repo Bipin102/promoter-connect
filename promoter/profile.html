@@ -106,7 +106,7 @@
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
   const $ = (id) => document.getElementById(id);
-  $("public-link").href = `/shared/promoter-profile.html?id=${encodeURIComponent(user.uid)}`;
+  $("public-link").href = `/shared/promoter-profile?id=${encodeURIComponent(user.uid)}`;
 
   let promoter = await getPromoter(user.uid);
   fillForm(promoter);

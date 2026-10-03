@@ -111,7 +111,7 @@ export async function cancelEvent(event) {
       type: "event_cancelled",
       title: "Event cancelled",
       message: `${event.eventName} on ${event.date} was cancelled by the company.`,
-      link: "/promoter/bookings.html",
+      link: "/promoter/bookings",
     });
   }));
   return active.length;

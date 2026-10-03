@@ -24,7 +24,7 @@
       <p>Your bookings, open gigs and ratings.</p>
     </div>
     <div class="page-actions">
-      <a href="/promoter/jobs.html" class="btn btn-primary">Find gigs</a>
+      <a href="/promoter/jobs" class="btn btn-primary">Find gigs</a>
     </div>
   </div>
 
@@ -33,7 +33,7 @@
   <section class="section">
     <div class="section-head">
       <h2>Urgent gigs open now</h2>
-      <a href="/promoter/jobs.html?type=urgent">See all</a>
+      <a href="/promoter/jobs?type=urgent">See all</a>
     </div>
     <div class="card-grid cols-2" id="urgent-jobs">
       <div class="skeleton" aria-hidden="true"><div class="skeleton-line" style="width:40%"></div><div class="skeleton-line" style="width:70%"></div></div>
@@ -43,7 +43,7 @@
   <section class="section">
     <div class="section-head">
       <h2>Upcoming bookings</h2>
-      <a href="/promoter/bookings.html">All bookings</a>
+      <a href="/promoter/bookings">All bookings</a>
     </div>
     <div id="upcoming"></div>
   </section>
@@ -51,7 +51,7 @@
   <section class="section">
     <div class="section-head">
       <h2>Recent ratings</h2>
-      <a href="/promoter/ratings.html">All ratings</a>
+      <a href="/promoter/ratings">All ratings</a>
     </div>
     <div class="card" id="ratings-preview"></div>
   </section>
@@ -103,7 +103,7 @@
     urgentHost.innerHTML = urgent.slice(0, 4).map((e) => jobCardHTML(e, { showActions: false })).join("");
     urgentHost.querySelectorAll(".job-card").forEach((card) => {
       card.classList.add("clickable");
-      card.addEventListener("click", () => { location.href = "/promoter/jobs.html?type=urgent"; });
+      card.addEventListener("click", () => { location.href = "/promoter/jobs?type=urgent"; });
     });
     tickCountdowns(urgentHost);
     setInterval(() => tickCountdowns(urgentHost), 1000);
@@ -113,7 +113,7 @@
 
   document.getElementById("upcoming").innerHTML = upcoming.length
     ? `<div class="list">${upcoming.slice(0, 4).map(bookingRowHTML).join("")}</div>`
-    : `<div class="empty-state boxed"><h3>No upcoming bookings</h3>Apply to a gig or book an urgent spot to see it here.<br><a class="btn btn-secondary" href="/promoter/jobs.html">Browse gigs</a></div>`;
+    : `<div class="empty-state boxed"><h3>No upcoming bookings</h3>Apply to a gig or book an urgent spot to see it here.<br><a class="btn btn-secondary" href="/promoter/jobs">Browse gigs</a></div>`;
   tickEventStarts();
   setInterval(tickEventStarts, 1000);
 

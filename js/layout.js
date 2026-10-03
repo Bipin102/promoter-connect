@@ -4,22 +4,22 @@ import { icon } from "./icons.js";
 
 const NAV = {
   guest: [
-    ["How it works", "/index.html#how-it-works"],
-    ["For promoters", "/auth/signup.html?role=promoter"],
-    ["For companies", "/auth/signup.html?role=company"],
+    ["How it works", "/#how-it-works"],
+    ["For promoters", "/auth/signup?role=promoter"],
+    ["For companies", "/auth/signup?role=company"],
   ],
   promoter: [
-    ["Dashboard", "/promoter/dashboard.html", "home"],
-    ["Find gigs", "/promoter/jobs.html", "search"],
-    ["Bookings", "/promoter/bookings.html", "ticket"],
-    ["Ratings", "/promoter/ratings.html"],
-    ["Profile", "/promoter/profile.html", "user"],
+    ["Dashboard", "/promoter/dashboard", "home"],
+    ["Find gigs", "/promoter/jobs", "search"],
+    ["Bookings", "/promoter/bookings", "ticket"],
+    ["Ratings", "/promoter/ratings"],
+    ["Profile", "/promoter/profile", "user"],
   ],
   company: [
-    ["Dashboard", "/company/dashboard.html", "home"],
-    ["Events", "/company/manage-events.html", "list"],
-    ["Find promoters", "/company/find-promoters.html", "users"],
-    ["Profile", "/company/profile.html", "user"],
+    ["Dashboard", "/company/dashboard", "home"],
+    ["Events", "/company/manage-events", "list"],
+    ["Find promoters", "/company/find-promoters", "users"],
+    ["Profile", "/company/profile", "user"],
   ],
 };
 
@@ -58,7 +58,7 @@ function renderNav(host, links, actionsHTML, { search = false, menuExtra = "" } 
     <a href="#main" class="skip-link">Skip to content</a>
     <nav class="pc-navbar" aria-label="Main">
       <div class="pc-navbar-inner">
-        <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
+        <a href="/" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
         <div class="pc-nav-links">${linksHTML(links)}</div>
         <div class="pc-nav-actions">
           ${search ? `
@@ -89,7 +89,7 @@ function renderNav(host, links, actionsHTML, { search = false, menuExtra = "" } 
   document.getElementById("pc-nav-search-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const q = document.getElementById("pc-nav-search-input").value.trim();
-    location.href = `/promoter/jobs.html${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+    location.href = `/promoter/jobs${q ? `?q=${encodeURIComponent(q)}` : ""}`;
   });
 }
 
@@ -123,10 +123,10 @@ function renderFooter(host, signedIn) {
             <p class="pc-footer-tagline">Built by a promoter, for promoters. Event staffing without the WhatsApp chase.</p>
           </div>
           <div class="pc-footer-links">
-            <a href="/index.html#how-it-works">How it works</a>
-            <a href="/auth/signup.html?role=promoter">Find gigs</a>
-            <a href="/auth/signup.html?role=company">Hire promoters</a>
-            <a href="/auth/login.html">Log in</a>
+            <a href="/#how-it-works">How it works</a>
+            <a href="/auth/signup?role=promoter">Find gigs</a>
+            <a href="/auth/signup?role=company">Hire promoters</a>
+            <a href="/auth/login">Log in</a>
           </div>
         </div>
         <p class="pc-footer-bottom">© ${new Date().getFullYear()} Promoter Connect</p>
@@ -145,19 +145,19 @@ export function mountLayout({ role = null } = {}) {
   if (!navHost) return;
 
   const guestActions = `
-    <a href="/auth/login.html" class="btn btn-ghost btn-sm pc-login">Log in</a>
-    <a href="/auth/signup.html" class="btn btn-primary btn-sm">Sign up</a>`;
-  const showSearch = (r) => r === "promoter" && location.pathname !== "/promoter/jobs.html";
+    <a href="/auth/login" class="btn btn-ghost btn-sm pc-login">Log in</a>
+    <a href="/auth/signup" class="btn btn-primary btn-sm">Sign up</a>`;
+  const showSearch = (r) => r === "promoter" && location.pathname !== "/promoter/jobs";
   renderNav(navHost, NAV[role] || NAV.guest, role ? "" : guestActions, {
     search: showSearch(role),
-    menuExtra: role ? "" : `<a href="/auth/login.html" class="pc-nav-mobile-extra">Log in</a>`,
+    menuExtra: role ? "" : `<a href="/auth/login" class="pc-nav-mobile-extra">Log in</a>`,
   });
   if (role) mountBottomNav(role);
 
   watchAuth(async (user, profile) => {
     if (!user || !profile) return;
     const links = [...NAV[profile.role]];
-    if (await isAdmin(user.uid)) links.push(["Admin", "/admin/dashboard.html"]);
+    if (await isAdmin(user.uid)) links.push(["Admin", "/admin/dashboard"]);
     renderNav(navHost, links, `
       <div id="pc-notif-slot" style="position:relative"></div>
       <button class="btn btn-ghost btn-sm pc-logout" data-logout>Log out</button>`, {

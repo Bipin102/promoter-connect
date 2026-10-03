@@ -24,8 +24,8 @@
       <p>Your events and who's confirmed for them.</p>
     </div>
     <div class="page-actions">
-      <a href="/company/post-event.html" class="btn btn-secondary">Post an event</a>
-      <a href="/company/post-event.html#urgent" class="btn btn-urgent">Need people in the next hour</a>
+      <a href="/company/post-event" class="btn btn-secondary">Post an event</a>
+      <a href="/company/post-event#urgent" class="btn btn-urgent">Need people in the next hour</a>
     </div>
   </div>
 
@@ -39,7 +39,7 @@
   <section class="section">
     <div class="section-head">
       <h2>Upcoming events</h2>
-      <a href="/company/manage-events.html">All events</a>
+      <a href="/company/manage-events">All events</a>
     </div>
     <div id="upcoming"><div class="loading-state"><div class="spinner"></div></div></div>
   </section>
@@ -75,7 +75,7 @@
     document.getElementById("urgent-section").hidden = false;
     const host = document.getElementById("urgent-trackers");
     host.innerHTML = urgentLive.map((e) => `
-      <a href="/company/event.html?id=${encodeURIComponent(e.id)}" class="tracker">
+      <a href="/company/event?id=${encodeURIComponent(e.id)}" class="tracker">
         <div class="tracker-head">
           <span class="tracker-title">${escapeHTML(e.eventName)}</span>
           <span class="tracker-timer" data-deadline="${Number(e.urgentDeadlineMs)}">--:--</span>
@@ -93,7 +93,7 @@
   }
 
   const eventRow = (e) => `
-    <a href="/company/event.html?id=${encodeURIComponent(e.id)}" class="list-row">
+    <a href="/company/event?id=${encodeURIComponent(e.id)}" class="list-row">
       <div class="list-row-main">
         <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}</div>
         <div class="list-row-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
@@ -107,7 +107,7 @@
   const upcoming = events.filter((e) => ["open", "fulfilled"].includes(e.status));
   document.getElementById("upcoming").innerHTML = upcoming.length
     ? `<div class="list">${upcoming.slice(0, 6).map(eventRow).join("")}</div>`
-    : `<div class="empty-state boxed"><h3>No upcoming events</h3>Post your first event and promoters can start booking.<br><a class="btn btn-primary" href="/company/post-event.html">Post an event</a></div>`;
+    : `<div class="empty-state boxed"><h3>No upcoming events</h3>Post your first event and promoters can start booking.<br><a class="btn btn-primary" href="/company/post-event">Post an event</a></div>`;
 </script>
 </body>
 </html>

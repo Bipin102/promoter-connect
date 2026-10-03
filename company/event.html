@@ -18,7 +18,7 @@
 <div id="pc-navbar"></div>
 
 <main class="page-shell narrow" id="main">
-  <a href="/company/manage-events.html" class="back-link" id="back-link"></a>
+  <a href="/company/manage-events" class="back-link" id="back-link"></a>
   <div id="content"><div class="loading-state"><div class="spinner"></div></div></div>
 </main>
 
@@ -44,7 +44,7 @@
   const eventId = params.get("id");
   const content = document.getElementById("content");
   const notFound = () => {
-    content.innerHTML = `<div class="empty-state boxed"><h3>Event not found</h3><a class="link" href="/company/manage-events.html">Back to your events</a></div>`;
+    content.innerHTML = `<div class="empty-state boxed"><h3>Event not found</h3><a class="link" href="/company/manage-events">Back to your events</a></div>`;
   };
   if (params.has("posted")) {
     toast("Your event is live.", "success");
@@ -162,7 +162,7 @@
           <div class="list-row-sub">Applied ${fmtTimestamp(a.appliedAt)}</div>
         </div>
         <div class="list-row-actions">
-          <a href="/shared/promoter-profile.html?id=${encodeURIComponent(a.promoterId)}" class="btn btn-ghost btn-sm">Profile</a>
+          <a href="/shared/promoter-profile?id=${encodeURIComponent(a.promoterId)}" class="btn btn-ghost btn-sm">Profile</a>
           ${a.status === "pending" ? `
             <button class="btn btn-secondary btn-sm" data-reject="${escapeHTML(a.id)}">Decline</button>
             <button class="btn btn-primary btn-sm" data-accept="${escapeHTML(a.id)}">Accept</button>` : statusPill(a.status)}
@@ -183,7 +183,7 @@
         </div>
         <div class="list-row-actions">
           ${statusPill(b.status)}
-          <a href="/shared/promoter-profile.html?id=${encodeURIComponent(b.promoterId)}" class="btn btn-ghost btn-sm">Profile</a>
+          <a href="/shared/promoter-profile?id=${encodeURIComponent(b.promoterId)}" class="btn btn-ghost btn-sm">Profile</a>
           ${b.status === "completed" ? `<button class="btn btn-secondary btn-sm" data-rate="${escapeHTML(b.id)}">Rate</button>` : ""}
         </div>
       </div>`;

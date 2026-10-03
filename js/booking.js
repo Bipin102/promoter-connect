@@ -79,14 +79,14 @@ export async function bookPosition(eventId, promoter) {
     type: "booking_confirmed",
     title: "New booking",
     message: `${promoter.fullName} booked a spot for ${result.event.eventName} (${result.newFilled} of ${result.positionsRequired} filled).`,
-    link: `/company/event.html?id=${eventId}`,
+    link: `/company/event?id=${eventId}`,
   });
   if (result.isNowFull) {
     await pushNotification(result.event.companyId, {
       type: "fulfilled",
       title: "Fully staffed",
       message: `All ${result.positionsRequired} spots for ${result.event.eventName} are filled.`,
-      link: `/company/event.html?id=${eventId}`,
+      link: `/company/event?id=${eventId}`,
     });
   }
 
@@ -113,7 +113,7 @@ export async function applyToEvent(eventId, promoter) {
     type: "new_application",
     title: "New application",
     message: `${promoter.fullName} applied for ${event.eventName}.`,
-    link: `/company/event.html?id=${eventId}`,
+    link: `/company/event?id=${eventId}`,
   });
 }
 
@@ -157,7 +157,7 @@ export async function respondToApplication(applicationId, decision, promoter) {
       type: "booking_confirmed",
       title: "You're booked",
       message: `Your application for ${application.eventName} was accepted.`,
-      link: `/promoter/bookings.html`,
+      link: `/promoter/bookings`,
     });
   } else {
     await updateDoc(appRef, { status: "rejected" });

@@ -168,8 +168,8 @@
   function renderRows() {
     const list = filteredUsers();
     document.getElementById("user-count").textContent = `${list.length} of ${users.length}`;
-    const profileHref = (u) => u.role === "company" ? `/shared/company-profile.html?id=${encodeURIComponent(u.uid)}`
-      : u.role === "promoter" ? `/shared/promoter-profile.html?id=${encodeURIComponent(u.uid)}` : null;
+    const profileHref = (u) => u.role === "company" ? `/shared/company-profile?id=${encodeURIComponent(u.uid)}`
+      : u.role === "promoter" ? `/shared/promoter-profile?id=${encodeURIComponent(u.uid)}` : null;
     document.getElementById("user-rows").innerHTML = list.length ? list.map((u) => {
       const href = profileHref(u);
       const name = escapeHTML(u.name || "(no name)");

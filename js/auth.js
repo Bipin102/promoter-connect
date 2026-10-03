@@ -63,7 +63,7 @@ export async function login(email, password) {
 
 export async function logout() {
   await signOut(auth);
-  window.location.href = "/index.html";
+  window.location.href = "/";
 }
 
 export async function resetPassword(email) {
@@ -106,19 +106,19 @@ export function requireAuth(requiredRole = null) {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = "/auth/login.html";
+        window.location.href = "/auth/login";
         return;
       }
       const profile = await getUserDoc(user.uid);
       if (!profile) {
         // Signed in but the signup never finished writing the profile.
-        window.location.href = "/auth/complete-profile.html";
+        window.location.href = "/auth/complete-profile";
         return;
       }
       if (requiredRole && profile.role !== requiredRole) {
         window.location.href = profile.role === "company"
-          ? "/company/dashboard.html"
-          : "/promoter/dashboard.html";
+          ? "/company/dashboard"
+          : "/promoter/dashboard";
         return;
       }
       touchLastActive(user.uid, profile);
@@ -132,7 +132,7 @@ export function requireAdmin() {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = "/auth/login.html";
+        window.location.href = "/auth/login";
         return;
       }
       resolve({ user, isAdmin: await isAdmin(user.uid) });

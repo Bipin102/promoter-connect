@@ -90,7 +90,7 @@
     $("result-count").textContent = `${promoters.length} ${promoters.length === 1 ? "promoter" : "promoters"}`;
     $("empty").classList.toggle("hidden", promoters.length > 0);
     $("results").innerHTML = promoters.map((p) => `
-      <a href="/shared/promoter-profile.html?id=${encodeURIComponent(p.id)}" class="card">
+      <a href="/shared/promoter-profile?id=${encodeURIComponent(p.id)}" class="card">
         <div class="flex gap-12 mb-16" style="align-items:center">
           ${avatarHTML(p.photoURL, p.fullName, "lg")}
           <div style="min-width:0">

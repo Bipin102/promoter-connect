@@ -16,7 +16,7 @@
 <body>
 <main class="auth-shell" id="main">
   <div class="auth-card">
-    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
+    <a href="/" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
     <h1 class="auth-title">Create your account</h1>
     <p class="auth-sub">Takes about a minute. You can fill in your profile after.</p>
 
@@ -61,7 +61,7 @@
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create account</button>
     </form>
 
-    <p class="auth-switch">Already have an account? <a href="/auth/login.html">Log in</a></p>
+    <p class="auth-switch">Already have an account? <a href="/auth/login">Log in</a></p>
   </div>
 </main>
 
@@ -101,7 +101,7 @@
     btn.disabled = true; btn.textContent = "Creating account…";
     try {
       await signup({ email, password, role, name });
-      location.href = role === "company" ? "/company/profile.html?onboarding=1" : "/promoter/profile.html?onboarding=1";
+      location.href = role === "company" ? "/company/profile?onboarding=1" : "/promoter/profile?onboarding=1";
     } catch (err) {
       showError(authErrorMessage(err));
       btn.disabled = false; btn.textContent = "Create account";
