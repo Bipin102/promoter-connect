@@ -16,6 +16,13 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
     }
 
+    // Admins are added by hand in the Firebase console: create a doc at
+    // admins/{your-auth-uid} (any fields). Nobody can write it from the client.
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create: if isOwner(uid);

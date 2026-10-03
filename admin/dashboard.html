@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<title>Admin Dashboard — Promoter Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/main.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+<div id="pc-navbar"></div>
+
+<div class="page-shell">
+  <div class="dash-header">
+    <div class="dash-greeting">
+      <h1>Admin Dashboard</h1>
+      <p id="as-of">Loading registrations…</p>
+    </div>
+    <div class="dash-quick-actions">
+      <button class="btn btn-secondary" id="refresh-btn">↻ Refresh</button>
+      <button class="btn btn-secondary" id="export-btn">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div id="admin-root"><div class="loading-state"><div class="spinner"></div></div></div>
+</div>
+
+<div id="pc-footer"></div>
+
+<script type="module">
+  import { requireAdmin } from "/js/auth.js";
+  import { db } from "/js/firebase-init.js";
+  import { mountLayout } from "/js/layout.js";
+  import { escapeHTML } from "/js/ui.js";
+  import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  mountLayout();
+  const root = document.getElementById("admin-root");
+  const { user, isAdmin } = await requireAdmin();
+
+  if (!isAdmin) {
+    document.getElementById("as-of").textContent = "";
+    document.querySelector(".dash-quick-actions").remove();
+    root.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🔒</div>
+        <h3>Admins only</h3>
+        <p class="text-dim">This account isn't an admin. Add a document at <code>admins/${escapeHTML(user.uid)}</code> in the Firebase console to grant access.</p>
+      </div>`;
+  }
+
+  const DAY = 24 * 60 * 60 * 1000;
+  const ACTIVE_WINDOW_DAYS = 7;
+  const CHART_DAYS = 30;
+  let users = [];
+  let filter = { q: "", role: "all" };
+
+  const toDate = (ts) => (ts?.toDate ? ts.toDate() : null);
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const fmtDay = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const fmtDateTime = (d) => d.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+
+  function relTime(d) {
+    if (!d) return "—";
+    const mins = Math.round((Date.now() - d) / 60000);
+    if (mins < 60) return mins <= 1 ? "just now" : `${mins} min ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs} h ago`;
+    const days = Math.round(hrs / 24);
+    return days < 30 ? `${days} d ago` : fmtDay(d);
+  }
+
+  async function load() {
+    root.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
+    const snap = await getDocs(collection(db, "users"));
+    users = snap.docs.map((d) => {
+      const u = d.data();
+      return {
+        uid: d.id,
+        name: u.displayName || "",
+        email: u.email || "",
+        role: u.role || "unknown",
+        createdAt: toDate(u.createdAt),
+        lastActiveAt: toDate(u.lastActiveAt),
+      };
+    }).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    document.getElementById("as-of").textContent = `Live from Firestore · updated ${fmtDateTime(new Date())}`;
+    render();
+  }
+
+  function stats() {
+    const now = new Date();
+    const today = startOfDay(now);
+    const weekAgo = new Date(today - 6 * DAY); // today + previous 6 days
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const activeSince = new Date(now - ACTIVE_WINDOW_DAYS * DAY);
+    const since = (d) => users.filter((u) => u.createdAt && u.createdAt >= d).length;
+    return {
+      total: users.length,
+      promoters: users.filter((u) => u.role === "promoter").length,
+      companies: users.filter((u) => u.role === "company").length,
+      active: users.filter((u) => u.lastActiveAt && u.lastActiveAt >= activeSince).length,
+      today: since(today),
+      week: since(weekAgo),
+      month: since(monthStart),
+    };
+  }
+
+  function render() {
+    const s = stats();
+    const tile = (icon, value, label, sub = "") => `
+      <div class="stat-tile"><div class="stat-icon">${icon}</div><div class="stat-value">${value}</div>
+      <div class="stat-label">${label}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ""}</div>`;
+
+    root.innerHTML = `
+      <div class="card-grid cols-4 mb-24">
+        ${tile("👥", s.total, "Total registered users", `${s.promoters} promoters · ${s.companies} companies`)}
+        ${tile("🟢", s.active, "Active users", `seen in the last ${ACTIVE_WINDOW_DAYS} days`)}
+        ${tile("📅", s.today, "New users today")}
+        ${tile("📈", `${s.week} <span class="stat-split">/ ${s.month}</span>`, "New this week / this month", "week = last 7 days")}
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-head"><h2>📊 Registrations — last ${CHART_DAYS} days</h2></div>
+        <div class="card admin-chart-card"><div id="growth-chart"></div></div>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-head"><h2>👤 Users</h2><span class="text-dim" id="user-count"></span></div>
+        <div class="filter-bar">
+          <div class="field"><input type="search" id="user-search" placeholder="Search name or email…" value="${escapeHTML(filter.q)}" /></div>
+          <div class="field" style="flex:0 0 180px;">
+            <select id="role-filter">
+              <option value="all">All roles</option>
+              <option value="promoter">Promoters</option>
+              <option value="company">Companies</option>
+            </select>
+          </div>
+        </div>
+        <div class="card admin-table-card"><div class="admin-table-wrap"><table class="admin-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th><th>Last active</th></tr></thead>
+          <tbody id="user-rows"></tbody>
+        </table></div></div>
+      </div>`;
+
+    document.getElementById("role-filter").value = filter.role;
+    document.getElementById("user-search").addEventListener("input", (e) => { filter.q = e.target.value; renderRows(); });
+    document.getElementById("role-filter").addEventListener("change", (e) => { filter.role = e.target.value; renderRows(); });
+    renderChart();
+    renderRows();
+  }
+
+  function filteredUsers() {
+    const q = filter.q.trim().toLowerCase();
+    return users.filter((u) =>
+      (filter.role === "all" || u.role === filter.role) &&
+      (!q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)));
+  }
+
+  function renderRows() {
+    const list = filteredUsers();
+    document.getElementById("user-count").textContent = `${list.length} of ${users.length}`;
+    const profileHref = (u) => u.role === "company" ? `/shared/company-profile.html?id=${encodeURIComponent(u.uid)}`
+      : u.role === "promoter" ? `/shared/promoter-profile.html?id=${encodeURIComponent(u.uid)}` : null;
+    document.getElementById("user-rows").innerHTML = list.length ? list.map((u) => {
+      const href = profileHref(u);
+      const name = escapeHTML(u.name || "(no name)");
+      return `<tr>
+        <td>${href ? `<a href="${href}">${name}</a>` : name}</td>
+        <td class="text-dim">${escapeHTML(u.email)}</td>
+        <td><span class="badge ${u.role === "company" ? "badge-partner" : "badge-top"}">${escapeHTML(u.role)}</span></td>
+        <td title="${u.createdAt ? fmtDateTime(u.createdAt) : ""}">${u.createdAt ? fmtDay(u.createdAt) : "—"}</td>
+        <td title="${u.lastActiveAt ? fmtDateTime(u.lastActiveAt) : "Not seen since activity tracking started"}">${relTime(u.lastActiveAt)}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="5" class="text-center text-dim" style="padding:32px;">No users match.</td></tr>`;
+  }
+
+  /** Daily new-registration bars for the last CHART_DAYS days, with a hover tooltip per bar. */
+  function renderChart() {
+    const host = document.getElementById("growth-chart");
+    const today = startOfDay(new Date());
+    const days = Array.from({ length: CHART_DAYS }, (_, i) => new Date(today - (CHART_DAYS - 1 - i) * DAY));
+    const counts = new Map(days.map((d) => [dayKey(d), 0]));
+    users.forEach((u) => {
+      if (!u.createdAt) return;
+      const k = dayKey(u.createdAt);
+      if (counts.has(k)) counts.set(k, counts.get(k) + 1);
+    });
+    const firstDay = days[0];
+    const before = users.filter((u) => u.createdAt && u.createdAt < firstDay).length;
+    let running = before;
+    const data = days.map((d) => { const n = counts.get(dayKey(d)); running += n; return { d, n, total: running }; });
+    const inWindow = running - before;
+
+    const W = Math.max(300, host.clientWidth), H = 240, padL = 32, padR = 8, padT = 12, padB = 28;
+    const max = Math.max(4, ...data.map((p) => p.n));
+    const yMax = Math.ceil(max / 4) * 4;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const slot = plotW / data.length, barW = Math.max(4, slot - 4);
+    const y = (v) => padT + plotH - (v / yMax) * plotH;
+
+    const grid = [0, yMax / 2, yMax].map((v) => `
+      <line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" class="ac-grid" />
+      <text x="${padL - 8}" y="${y(v) + 4}" text-anchor="end" class="ac-axis">${v}</text>`).join("");
+
+    const bars = data.map((p, i) => {
+      const x = padL + i * slot + (slot - barW) / 2;
+      const h = Math.max(0, plotH - (y(p.n) - padT));
+      const r = Math.min(4, barW / 2, h);
+      const top = padT + plotH - h;
+      // Rounded top corners only; the bar stays flat on the baseline.
+      const path = h > 0 ? `M${x},${padT + plotH} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${padT + plotH} Z` : "";
+      return `<g class="ac-bar" data-i="${i}">
+        <rect x="${padL + i * slot}" y="${padT}" width="${slot}" height="${plotH}" class="ac-hit" />
+        ${path ? `<path d="${path}" class="ac-fill" />` : ""}
+      </g>`;
+    }).join("");
+
+    const ticks = data.map((p, i) => (data.length - 1 - i) % 7 === 0
+      ? `<text x="${i === data.length - 1 ? W - padR : padL + i * slot + slot / 2}" y="${H - 8}" text-anchor="${i === data.length - 1 ? "end" : "middle"}" class="ac-axis">${p.d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</text>` : "").join("");
+
+    host.innerHTML = `
+      <p class="ac-summary"><strong>${inWindow}</strong> new registrations in the last ${CHART_DAYS} days · total grew from ${before} to ${running}</p>
+      <div class="ac-wrap">
+        <svg viewBox="0 0 ${W} ${H}" class="ac-svg" role="img" aria-label="Daily new registrations over the last ${CHART_DAYS} days">
+          ${grid}${bars}${ticks}
+        </svg>
+        <div class="ac-tip" id="ac-tip" hidden></div>
+      </div>
+      <details class="ac-table"><summary>Show as table</summary>
+        <table class="admin-table"><thead><tr><th>Date</th><th>New users</th><th>Running total</th></tr></thead>
+        <tbody>${data.slice().reverse().map((p) => `<tr><td>${fmtDay(p.d)}</td><td>${p.n}</td><td>${p.total}</td></tr>`).join("")}</tbody></table>
+      </details>`;
+
+    const tip = document.getElementById("ac-tip");
+    const wrap = host.querySelector(".ac-wrap");
+    host.querySelectorAll(".ac-bar").forEach((g) => {
+      g.addEventListener("pointerenter", () => {
+        const p = data[+g.dataset.i];
+        g.classList.add("hover");
+        tip.innerHTML = `<div class="ac-tip-date">${fmtDay(p.d)}</div><div><strong>${p.n}</strong> new · ${p.total} total</div>`;
+        tip.hidden = false;
+        const gr = g.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+        const left = Math.min(Math.max(gr.left - wr.left + gr.width / 2, 70), wr.width - 70);
+        tip.style.left = `${left}px`;
+      });
+      g.addEventListener("pointerleave", () => { g.classList.remove("hover"); tip.hidden = true; });
+    });
+  }
+
+  function exportCSV() {
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["Name", "Email", "Role", "Registered", "Last active", "UID"]].concat(
+      filteredUsers().map((u) => [u.name, u.email, u.role, u.createdAt?.toISOString() || "", u.lastActiveAt?.toISOString() || "", u.uid]));
+    const blob = new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `promoter-connect-users-${new Date().toISOString().slice(0, 10)}.csv` });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (users.length && document.getElementById("growth-chart")) renderChart(); }, 150);
+  });
+
+  if (isAdmin) {
+    document.getElementById("refresh-btn").addEventListener("click", load);
+    document.getElementById("export-btn").addEventListener("click", exportCSV);
+    try { await load(); }
+    catch (err) {
+      root.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Couldn't load users</h3><p class="text-dim">${escapeHTML(err.message)}</p></div>`;
+    }
+  }
+</script>
+</body>
+</html>

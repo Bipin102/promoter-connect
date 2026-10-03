@@ -3,7 +3,7 @@ import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /**
  * Creates the Firestore side of an account (users/{uid} + promoters/{uid} or
@@ -70,6 +70,18 @@ export async function resetPassword(email) {
   await sendPasswordResetEmail(auth, email);
 }
 
+const ACTIVE_PING_MS = 60 * 60 * 1000;
+
+/**
+ * Stamps users/{uid}.lastActiveAt so the admin dashboard can count active users.
+ * Throttled to once an hour per user, and never blocks or breaks the page.
+ */
+function touchLastActive(uid, profile) {
+  const last = profile.lastActiveAt?.toMillis?.() || 0;
+  if (Date.now() - last < ACTIVE_PING_MS) return;
+  updateDoc(doc(db, "users", uid), { lastActiveAt: serverTimestamp() }).catch(() => {});
+}
+
 export function getUserDoc(uid) {
   return getDoc(doc(db, "users", uid)).then((s) => (s.exists() ? s.data() : null));
 }
@@ -99,7 +111,26 @@ export function requireAuth(requiredRole = null) {
           : "/promoter/dashboard.html";
         return;
       }
+      touchLastActive(user.uid, profile);
       resolve({ user, profile });
+    });
+  });
+}
+
+/**
+ * Guards an admin-only page. Admins are listed in the `admins/{uid}` collection,
+ * which can only be written from the Firebase console (see firestore.rules).
+ * Resolves with { user, isAdmin }.
+ */
+export function requireAdmin() {
+  return new Promise((resolve) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "/auth/login.html";
+        return;
+      }
+      const snap = await getDoc(doc(db, "admins", user.uid)).catch(() => null);
+      resolve({ user, isAdmin: !!snap?.exists() });
     });
   });
 }
@@ -109,6 +140,7 @@ export function watchAuth(cb) {
   onAuthStateChanged(auth, async (user) => {
     if (!user) return cb(null, null);
     const profile = await getUserDoc(user.uid);
+    if (profile) touchLastActive(user.uid, profile);
     cb(user, profile);
   });
 }
