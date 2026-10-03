@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Promoter Profile — Promoter Connect</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Promoter · Promoter Connect</title>
+<script>try{var t=localStorage.getItem("pc-theme")}catch(e){}document.documentElement.setAttribute("data-theme",t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"))</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 <link rel="stylesheet" href="/css/dashboard.css" />
@@ -13,7 +17,7 @@
 <body>
 <div id="pc-navbar"></div>
 
-<div class="page-shell" id="content"><div class="loading-state"><div class="spinner"></div></div></div>
+<main class="page-shell" id="main"><div id="content"><div class="loading-state"><div class="spinner"></div></div></div></main>
 
 <div id="pc-footer"></div>
 
@@ -22,81 +26,76 @@
   import { mountLayout } from "/js/layout.js";
   import { getPromoter, listPortfolio } from "/js/db.js";
   import { listRatingsFor } from "/js/ratings.js";
-  import { stars, badgeList, escapeHTML } from "/js/ui.js";
+  import { stars, badgeList, escapeHTML, avatarHTML, safeUrl, statusPill, fmtTimestamp } from "/js/ui.js";
 
   const { profile } = await requireAuth();
   mountLayout({ role: profile.role });
 
   const id = new URLSearchParams(location.search).get("id");
   const content = document.getElementById("content");
-  if (!id) { content.innerHTML = `<div class="empty-state">Promoter not found.</div>`; throw new Error("no id"); }
+  const notFound = () => { content.innerHTML = `<div class="empty-state boxed"><h3>Profile not found</h3>This promoter may have deleted their account.</div>`; };
 
-  const [promoter, portfolio, ratings] = await Promise.all([getPromoter(id), listPortfolio(id), listRatingsFor(id)]);
-  if (!promoter) { content.innerHTML = `<div class="empty-state">Promoter not found.</div>`; throw new Error("not found"); }
+  const [promoter, portfolio, ratings] = id
+    ? await Promise.all([getPromoter(id), listPortfolio(id), listRatingsFor(id)])
+    : [null, [], []];
 
-  content.innerHTML = `
-    <div class="profile-hero">
-      <div class="avatar xl">${promoter.photoURL ? `<img src="${promoter.photoURL}" />` : (promoter.fullName||"?")[0].toUpperCase()}</div>
-      <div class="profile-hero-info">
-        <h1>${escapeHTML(promoter.fullName || "Promoter")}</h1>
-        <div>${stars(promoter.ratingAvg||0, promoter.ratingCount||0)}</div>
-        <div class="profile-hero-meta">
-          <span>🎯 ${promoter.eventsCompleted||0} Events Completed</span>
-          <span>💬 ${promoter.ratingCount||0} Reviews</span>
-          <span>🏆 ${promoter.yearsExperience||0} Years Experience</span>
-          <span>📍 ${escapeHTML(promoter.city || "—")}</span>
-        </div>
-        <div class="profile-badges">${badgeList(promoter, "promoter")}</div>
-      </div>
-    </div>
+  if (!promoter) notFound();
+  else {
+    document.title = `${promoter.fullName || "Promoter"} · Promoter Connect`;
+    const details = [
+      ["Age", promoter.age],
+      ["Gender", promoter.gender],
+      ["Height", promoter.height],
+      ["Experience", promoter.yearsExperience ? `${promoter.yearsExperience} ${promoter.yearsExperience === 1 ? "year" : "years"}` : ""],
+    ].filter(([, v]) => v);
+    const photos = portfolio.map((p) => safeUrl(p.url)).filter(Boolean);
 
-    <div class="two-col">
-      <div>
-        <div class="card mb-24">
-          <h3 class="mb-16">About</h3>
-          <div style="font-size:14px;line-height:2;">
-            <div>Age: ${promoter.age || "—"} &nbsp; Gender: ${escapeHTML(promoter.gender || "—")} &nbsp; Height: ${escapeHTML(promoter.height || "—")}</div>
-            <div>Availability: <span class="status-pill ${promoter.availability === "available" ? "status-fulfilled" : "status-pending"}">${(promoter.availability||"available").toUpperCase()}</span></div>
+    content.innerHTML = `
+      <div class="profile-hero">
+        ${avatarHTML(promoter.photoURL, promoter.fullName, "xl")}
+        <div>
+          <h1>${escapeHTML(promoter.fullName || "Promoter")}</h1>
+          ${stars(promoter.ratingAvg || 0, promoter.ratingCount || 0)}
+          <div class="profile-hero-meta">
+            <span>${escapeHTML(promoter.city || "City not set")}</span>
+            <span>${promoter.eventsCompleted || 0} events completed</span>
+            ${statusPill(promoter.availability === "busy" ? "busy" : "available")}
           </div>
-          ${tagBlock("Skills", promoter.skills)}
-          ${tagBlock("Languages", promoter.languages)}
-          ${tagBlock("Previous Brands", promoter.brands)}
-          ${tagBlock("Event Categories", promoter.categories)}
+          <div class="profile-badges">${badgeList(promoter, "promoter")}</div>
         </div>
+      </div>
 
-        <div class="card mb-24">
-          <h3 class="mb-16">Portfolio</h3>
-          ${portfolio.length ? `<div class="gallery-grid">${portfolio.map((p) => `<img src="${p.url}" />`).join("")}</div>` : `<p class="text-dim">No portfolio photos yet.</p>`}
+      <div class="two-col">
+        <div class="stack">
+          <div class="card">
+            <h2 class="card-title">About</h2>
+            ${details.length ? `<dl class="detail-list">${details.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHTML(v)}</dd>`).join("")}</dl>` : `<p class="text-dim">No details added yet.</p>`}
+            ${tagBlock("Skills", promoter.skills)}
+            ${tagBlock("Languages", promoter.languages)}
+            ${tagBlock("Brands worked with", promoter.brands)}
+            ${tagBlock("Event types", promoter.categories)}
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Portfolio</h2>
+            ${photos.length ? `<div class="gallery-grid">${photos.map((src) => `<img src="${src}" alt="" loading="lazy" />`).join("")}</div>` : `<p class="text-dim">No photos yet.</p>`}
+          </div>
         </div>
 
         <div class="card">
-          <h3 class="mb-16">Reviews</h3>
-          ${ratings.length ? ratings.slice(0,10).map((r) => `
-            <div class="mb-16" style="border-bottom:1px solid var(--border);padding-bottom:12px;">
-              <strong>${r.overall.toFixed(1)} ★</strong>
-              <p class="text-dim" style="font-size:13px;">${escapeHTML(r.comment || "No written comment.")}</p>
+          <h2 class="card-title">Reviews</h2>
+          ${ratings.length ? ratings.slice(0, 10).map((r) => `
+            <div class="review">
+              <div class="review-head"><strong>${r.overall.toFixed(1)} out of 5</strong><span class="text-faint text-sm">${fmtTimestamp(r.createdAt)}</span></div>
+              ${r.comment ? `<p>${escapeHTML(r.comment)}</p>` : ""}
             </div>`).join("") : `<p class="text-dim">No reviews yet.</p>`}
         </div>
-      </div>
-
-      <div class="card">
-        <h3 class="mb-16">Snapshot</h3>
-        <p style="font-size:14px;line-height:2;">
-          ⭐ ${(promoter.ratingAvg||0).toFixed(1)} Average Rating<br/>
-          🎯 ${promoter.eventsCompleted||0} Events Completed<br/>
-          💬 ${promoter.ratingCount||0} Reviews<br/>
-          🏆 ${promoter.yearsExperience||0} Years Experience<br/>
-          📍 ${escapeHTML(promoter.city || "—")}<br/>
-          ${promoter.verified ? "✓ Verified Profile" : "Not yet verified"}
-        </p>
-      </div>
-    </div>
-  `;
+      </div>`;
+  }
 
   function tagBlock(label, items) {
-    if (!items || !items.length) return "";
-    return `<div class="mt-16"><label style="font-size:12px;color:var(--text-dim);font-weight:600;">${label}</label>
-      <div class="flex gap-8 mt-8" style="flex-wrap:wrap;">${items.map((i) => `<span class="badge badge-events">${escapeHTML(i)}</span>`).join("")}</div></div>`;
+    if (!items?.length) return "";
+    return `<p class="field-label mt-16">${label}</p><div class="tag-list">${items.map((i) => `<span class="badge">${escapeHTML(i)}</span>`).join("")}</div>`;
   }
 </script>
 </body>

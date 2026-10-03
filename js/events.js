@@ -1,10 +1,10 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  collection, addDoc, doc, getDoc, getDocs, updateDoc, query, where, orderBy, onSnapshot
+  collection, addDoc, doc, getDoc, getDocs, updateDoc, query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
 
-export const URGENT_WINDOW_MS = 60 * 60 * 1000; // the core 1-hour fulfillment USP
+export const URGENT_WINDOW_MS = 60 * 60 * 1000;
 
 export async function postEvent(companyId, data) {
   const isUrgent = data.hiringType === "urgent";
@@ -17,7 +17,7 @@ export async function postEvent(companyId, data) {
     startTime: data.startTime,
     endTime: data.endTime,
     location: data.location,
-    locationGeo: data.locationGeo || null, // optional {lat,lng} captured at posting time, powers reachability matching
+    locationGeo: data.locationGeo || null,
     positionsRequired: Number(data.positionsRequired) || 1,
     positionsFilled: 0,
     genderReq: data.genderReq || "",
@@ -39,7 +39,6 @@ export async function postEvent(companyId, data) {
     updatedAt: serverTimestamp(),
   };
   const ref = await addDoc(collection(db, "events"), payload);
-  await updateDoc(doc(db, "companies", companyId), {}); // no-op keeps rules happy on some setups
   return ref.id;
 }
 
@@ -48,17 +47,22 @@ export async function getEvent(eventId) {
   return s.exists() ? { id: s.id, ...s.data() } : null;
 }
 
+export async function reopenUrgentEvent(eventId) {
+  await updateDoc(doc(db, "events", eventId), { status: "open", urgentDeadlineMs: Date.now() + URGENT_WINDOW_MS, updatedAt: serverTimestamp() });
+}
+
 export function watchEvent(eventId, cb) {
   return onSnapshot(doc(db, "events", eventId), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null));
 }
 
 export async function listOpenEvents(filters = {}) {
-  const snap = await getDocs(query(collection(db, "events"), orderBy("createdAt", "desc")));
-  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  list = list.filter((e) => e.status === "open" || e.status === "fulfilled");
+  // Sorted client-side: an "in" filter plus orderBy(createdAt) would need a composite index.
+  const snap = await getDocs(query(collection(db, "events"), where("status", "in", ["open", "fulfilled"])));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   if (filters.hiringType) list = list.filter((e) => e.hiringType === filters.hiringType);
   if (filters.location) list = list.filter((e) => (e.location || "").toLowerCase().includes(filters.location.toLowerCase()));
-  if (filters.category) list = list.filter((e) => e.category === filters.category);
+  if (filters.category) list = list.filter((e) => (e.category || "").toLowerCase().includes(filters.category.toLowerCase()));
   if (filters.date) list = list.filter((e) => e.date === filters.date);
   if (filters.minPayment) list = list.filter((e) => e.paymentAmount >= Number(filters.minPayment));
   if (filters.keyword) {
@@ -74,16 +78,14 @@ export async function listOpenEvents(filters = {}) {
 }
 
 export async function listCompanyEvents(companyId) {
-  // Sorted client-side so this doesn't depend on a manually-created composite index
-  // (where(companyId) + orderBy(createdAt) on different fields needs one otherwise).
+  // Sorted client-side to avoid needing a composite index.
   const snap = await getDocs(query(collection(db, "events"), where("companyId", "==", companyId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 }
 
-/** Client-side correction for urgent jobs whose 1-hour window elapsed without full fulfillment.
- *  (A production build would run this via a scheduled Cloud Function; here any viewer's client
- *  performs the honest state transition the moment the deadline is detected.) */
+/** Moves an urgent event whose hour ran out to window_ended. There's no backend job,
+ *  so whichever client sees it first makes the change. */
 export async function reconcileUrgentWindow(event) {
   if (
     event.hiringType === "urgent" &&
@@ -91,18 +93,27 @@ export async function reconcileUrgentWindow(event) {
     event.urgentDeadlineMs &&
     Date.now() > event.urgentDeadlineMs
   ) {
-    await updateDoc(doc(db, "events", event.id), { status: "window_ended", updatedAt: serverTimestamp() });
+    // Signed-out visitors can't write; they still get the corrected status locally.
+    await updateDoc(doc(db, "events", event.id), { status: "window_ended", updatedAt: serverTimestamp() }).catch(() => {});
     return { ...event, status: "window_ended" };
   }
   return event;
 }
 
-export async function cancelEvent(eventId) {
-  await updateDoc(doc(db, "events", eventId), { status: "cancelled", updatedAt: serverTimestamp() });
+/** Cancels the event and every active booking on it, and tells each booked promoter. */
+export async function cancelEvent(event) {
+  await updateDoc(doc(db, "events", event.id), { status: "cancelled", updatedAt: serverTimestamp() });
+  const snap = await getDocs(query(collection(db, "bookings"), where("eventId", "==", event.id)));
+  const active = snap.docs.filter((d) => ["booked", "on_the_way", "checked_in", "active"].includes(d.data().status));
+  await Promise.all(active.map(async (d) => {
+    await updateDoc(d.ref, { status: "cancelled", updatedAt: serverTimestamp() });
+    await pushNotification(d.data().promoterId, {
+      type: "event_cancelled",
+      title: "Event cancelled",
+      message: `${event.eventName} on ${event.date} was cancelled by the company.`,
+      link: "/promoter/bookings.html",
+    });
+  }));
+  return active.length;
 }
 
-export async function markEventCompleted(eventId) {
-  await updateDoc(doc(db, "events", eventId), { status: "completed", updatedAt: serverTimestamp() });
-}
-
-export { pushNotification };

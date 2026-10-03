@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  doc, runTransaction, collection, addDoc, setDoc, getDocs, getDoc, query, where,
+  doc, runTransaction, collection, setDoc, getDocs, getDoc, query, where,
   updateDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
@@ -20,11 +20,9 @@ export const BOOKING_ERRORS = {
 };
 
 /**
- * Atomic instant-booking for urgent (and normal) positions.
- * Uses a deterministic booking doc id (`${eventId}_${promoterId}`) so the
- * transaction can check "already booked" and "slot available" with plain
- * document reads/writes only — no query is needed inside the transaction,
- * which keeps this safe under concurrent BOOK NOW clicks from many promoters.
+ * The booking id is `${eventId}_${promoterId}`, so the transaction can check
+ * "already booked" and "spot still free" with document reads alone. Two
+ * promoters racing for the last spot can't both get it.
  */
 export async function bookPosition(eventId, promoter) {
   const eventRef = doc(db, "events", eventId);
@@ -79,15 +77,15 @@ export async function bookPosition(eventId, promoter) {
 
   await pushNotification(result.event.companyId, {
     type: "booking_confirmed",
-    title: "👤 New Promoter Confirmed",
-    message: `${promoter.fullName} confirmed a position for "${result.event.eventName}" (${result.newFilled}/${result.positionsRequired}).`,
+    title: "New booking",
+    message: `${promoter.fullName} booked a spot for ${result.event.eventName} (${result.newFilled} of ${result.positionsRequired} filled).`,
     link: `/company/event.html?id=${eventId}`,
   });
   if (result.isNowFull) {
     await pushNotification(result.event.companyId, {
       type: "fulfilled",
-      title: "✅ Requirement Fully Fulfilled",
-      message: `All ${result.positionsRequired} promoter positions for "${result.event.eventName}" are confirmed.`,
+      title: "Fully staffed",
+      message: `All ${result.positionsRequired} spots for ${result.event.eventName} are filled.`,
       link: `/company/event.html?id=${eventId}`,
     });
   }
@@ -95,7 +93,6 @@ export async function bookPosition(eventId, promoter) {
   return { bookingId, ...result };
 }
 
-/** Normal-job application (no slot race — reviewed manually by the company). */
 export async function applyToEvent(eventId, promoter) {
   const appId = `${eventId}_${promoter.uid}`;
   const appRef = doc(db, "applications", appId);
@@ -114,8 +111,8 @@ export async function applyToEvent(eventId, promoter) {
 
   await pushNotification(event.companyId, {
     type: "new_application",
-    title: "🔔 New Application",
-    message: `${promoter.fullName} applied for "${event.eventName}".`,
+    title: "New application",
+    message: `${promoter.fullName} applied for ${event.eventName}.`,
     link: `/company/event.html?id=${eventId}`,
   });
 }
@@ -158,8 +155,8 @@ export async function respondToApplication(applicationId, decision, promoter) {
     });
     await pushNotification(application.promoterId, {
       type: "booking_confirmed",
-      title: "✅ Booking Confirmed",
-      message: `You're booked for "${application.eventName}"!`,
+      title: "You're booked",
+      message: `Your application for ${application.eventName} was accepted.`,
       link: `/promoter/bookings.html`,
     });
   } else {
@@ -168,20 +165,13 @@ export async function respondToApplication(applicationId, decision, promoter) {
 }
 
 export async function listPromoterBookings(promoterId) {
-  // Sorted client-side (not via a Firestore orderBy) so this never depends on a
-  // manually-created composite index — where(promoterId) + orderBy(bookedAt) on
-  // different fields would otherwise fail at query time until one exists.
+  // Sorted client-side to avoid needing a composite index.
   const snap = await getDocs(query(collection(db, "bookings"), where("promoterId", "==", promoterId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byTimestampDesc("bookedAt"));
 }
 
 function byTimestampDesc(field) {
   return (a, b) => (b[field]?.toMillis?.() || 0) - (a[field]?.toMillis?.() || 0);
-}
-
-export async function listCompanyBookingsForEvent(eventId) {
-  const snap = await getDocs(query(collection(db, "bookings"), where("eventId", "==", eventId)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export function watchCompanyBookingsForEvent(eventId, cb) {
@@ -198,8 +188,7 @@ export async function updateBookingStatus(bookingId, status) {
   await updateDoc(doc(db, "bookings", bookingId), { status, updatedAt: serverTimestamp() });
 }
 
-/** Company marks the whole event as done: flips active bookings to COMPLETED and
- *  bumps each side's "events completed" counter (which feeds badges + ratings eligibility). */
+/** Closes out an event: completes active bookings and bumps both sides' eventsCompleted. */
 export async function completeEvent(eventId) {
   const bookingsSnap = await getDocs(query(collection(db, "bookings"), where("eventId", "==", eventId)));
   const bookings = bookingsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));

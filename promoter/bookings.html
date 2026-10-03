@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Bookings — Promoter Connect</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bookings · Promoter Connect</title>
+<script>try{var t=localStorage.getItem("pc-theme")}catch(e){}document.documentElement.setAttribute("data-theme",t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"))</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 <link rel="stylesheet" href="/css/dashboard.css" />
@@ -13,17 +17,22 @@
 <body>
 <div id="pc-navbar"></div>
 
-<div class="page-shell">
-  <div class="page-header"><h1>📅 My Bookings</h1><p>Track upcoming and completed events.</p></div>
-
-  <div class="pc-tabs">
-    <div class="pc-tab active" data-tab="upcoming">Upcoming</div>
-    <div class="pc-tab" data-tab="completed">Completed</div>
-    <div class="pc-tab" data-tab="cancelled">Cancelled</div>
+<main class="page-shell" id="main">
+  <div class="page-header">
+    <div>
+      <h1>Bookings</h1>
+      <p>Everything you've booked or been accepted for.</p>
+    </div>
   </div>
 
-  <div id="list"></div>
-</div>
+  <div class="pc-tabs" id="tabs">
+    <button class="pc-tab" data-tab="upcoming" aria-selected="true">Upcoming <span class="count" id="count-upcoming"></span></button>
+    <button class="pc-tab" data-tab="completed" aria-selected="false">Completed <span class="count" id="count-completed"></span></button>
+    <button class="pc-tab" data-tab="cancelled" aria-selected="false">Cancelled <span class="count" id="count-cancelled"></span></button>
+  </div>
+
+  <div id="list" role="tabpanel"><div class="loading-state"><div class="spinner"></div></div></div>
+</main>
 
 <div id="pc-footer"></div>
 
@@ -31,60 +40,35 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { listPromoterBookings } from "/js/booking.js";
-  import { fmtDate, escapeHTML, fmtEventCountdown, eventStartDate } from "/js/ui.js";
+  import { bookingRowHTML, tickEventStarts, ACTIVE_BOOKING_STATUSES } from "/js/render.js";
+  import { initTabs } from "/js/ui.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
   const bookings = await listPromoterBookings(user.uid);
 
   const groups = {
-    upcoming: bookings.filter((b) => ["booked", "on_the_way", "checked_in", "active"].includes(b.status)),
+    upcoming: bookings.filter((b) => ACTIVE_BOOKING_STATUSES.includes(b.status)),
     completed: bookings.filter((b) => b.status === "completed"),
     cancelled: bookings.filter((b) => b.status === "cancelled"),
   };
-
-  function render(tab) {
-    const items = groups[tab];
-    document.getElementById("list").innerHTML = items.length
-      ? items.map((b) => `
-        <a href="/promoter/event.html?id=${b.id}" class="promoter-row mb-16" style="justify-content:space-between;">
-          <div class="flex gap-16" style="align-items:center;">
-            <div class="avatar">${(b.eventName || "?")[0]}</div>
-            <div>
-              <strong>${escapeHTML(b.eventName)}</strong>
-              <p class="text-dim" style="font-size:12px;">📍 ${escapeHTML(b.location)} · 📅 ${fmtDate(b.date)} · 🕐 ${b.startTime}–${b.endTime}</p>
-              <p class="text-dim" style="font-size:12px;">🎟️ ${b.bookingCode}</p>
-              ${["booked","on_the_way"].includes(b.status) ? `<p class="mt-8" style="font-size:12px;font-weight:700;color:var(--pink);" data-event-start="${eventStartDate(b.date, b.startTime)?.getTime() || ""}">⏱️ —</p>` : ""}
-            </div>
-          </div>
-          <div class="text-center">
-            <span class="status-pill status-${b.status}">${b.status.replace("_"," ").toUpperCase()}</span>
-            <div class="text-dim mt-8" style="font-size:13px;">₹${Number(b.paymentAmount||0).toLocaleString("en-IN")}</div>
-          </div>
-        </a>`).join("")
-      : `<div class="empty-state"><div class="empty-state-icon">📭</div>Nothing here yet.</div>`;
-    tickBookingCountdowns();
-  }
-
-  function tickBookingCountdowns() {
-    document.querySelectorAll("[data-event-start]").forEach((el) => {
-      const target = Number(el.dataset.eventStart);
-      if (!target) { el.textContent = ""; return; }
-      const label = fmtEventCountdown(target - Date.now());
-      el.textContent = label ? `⏱️ Starts in ${label}` : "🟢 Event started";
-    });
-  }
-  setInterval(tickBookingCountdowns, 1000);
-
-  document.querySelectorAll(".pc-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".pc-tab").forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      render(tab.dataset.tab);
-    });
+  const emptyText = {
+    upcoming: `Nothing booked yet. <a class="link" href="/promoter/jobs.html">Find a gig</a>`,
+    completed: "Events you've worked will show up here.",
+    cancelled: "No cancelled bookings.",
+  };
+  Object.entries(groups).forEach(([key, items]) => {
+    document.getElementById(`count-${key}`).textContent = items.length || "";
   });
 
-  render("upcoming");
+  initTabs(document.getElementById("tabs"), (tab) => {
+    const items = groups[tab];
+    document.getElementById("list").innerHTML = items.length
+      ? `<div class="list">${items.map(bookingRowHTML).join("")}</div>`
+      : `<div class="empty-state boxed">${emptyText[tab]}</div>`;
+    tickEventStarts();
+  });
+  setInterval(tickEventStarts, 1000);
 </script>
 </body>
 </html>

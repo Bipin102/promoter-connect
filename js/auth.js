@@ -71,25 +71,37 @@ export async function resetPassword(email) {
 }
 
 const ACTIVE_PING_MS = 60 * 60 * 1000;
+let lastActiveTouched = false;
 
-/**
- * Stamps users/{uid}.lastActiveAt so the admin dashboard can count active users.
- * Throttled to once an hour per user, and never blocks or breaks the page.
- */
+// Feeds the "active users" count on the admin dashboard; at most one write per user per hour.
 function touchLastActive(uid, profile) {
+  if (lastActiveTouched) return;
+  lastActiveTouched = true;
   const last = profile.lastActiveAt?.toMillis?.() || 0;
   if (Date.now() - last < ACTIVE_PING_MS) return;
   updateDoc(doc(db, "users", uid), { lastActiveAt: serverTimestamp() }).catch(() => {});
 }
 
+// The navbar and the page guard both need the profile on load; share one read.
+const profileRequests = new Map();
 export function getUserDoc(uid) {
-  return getDoc(doc(db, "users", uid)).then((s) => (s.exists() ? s.data() : null));
+  if (!profileRequests.has(uid)) {
+    const request = getDoc(doc(db, "users", uid)).then((s) => (s.exists() ? s.data() : null));
+    request.then((profile) => { if (!profile) profileRequests.delete(uid); }, () => profileRequests.delete(uid));
+    profileRequests.set(uid, request);
+  }
+  return profileRequests.get(uid);
 }
 
-/**
- * Guards a page: waits for auth, ensures role matches (if given), redirects otherwise.
- * Resolves with { user, profile } once ready. Use at the top of protected pages.
- */
+const adminRequests = new Map();
+export function isAdmin(uid) {
+  if (!adminRequests.has(uid)) {
+    adminRequests.set(uid, getDoc(doc(db, "admins", uid)).then((s) => s.exists(), () => false));
+  }
+  return adminRequests.get(uid);
+}
+
+/** Redirects away unless signed in (and in the given role). Resolves with { user, profile }. */
 export function requireAuth(requiredRole = null) {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
@@ -99,9 +111,7 @@ export function requireAuth(requiredRole = null) {
       }
       const profile = await getUserDoc(user.uid);
       if (!profile) {
-        // Auth account exists but the Firestore profile never got written (an
-        // interrupted signup) — send them to finish it instead of bouncing
-        // back to login, which would just loop forever.
+        // Signed in but the signup never finished writing the profile.
         window.location.href = "/auth/complete-profile.html";
         return;
       }
@@ -117,11 +127,7 @@ export function requireAuth(requiredRole = null) {
   });
 }
 
-/**
- * Guards an admin-only page. Admins are listed in the `admins/{uid}` collection,
- * which can only be written from the Firebase console (see firestore.rules).
- * Resolves with { user, isAdmin }.
- */
+/** Admins are the uids listed in the `admins` collection (written from the Firebase console only). */
 export function requireAdmin() {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
@@ -129,13 +135,12 @@ export function requireAdmin() {
         window.location.href = "/auth/login.html";
         return;
       }
-      const snap = await getDoc(doc(db, "admins", user.uid)).catch(() => null);
-      resolve({ user, isAdmin: !!snap?.exists() });
+      resolve({ user, isAdmin: await isAdmin(user.uid) });
     });
   });
 }
 
-/** Non-blocking helper for public pages (landing/nav) that just need to know if someone's logged in. */
+/** For public pages and the navbar: reports the signed-in user (or null) without redirecting. */
 export function watchAuth(cb) {
   onAuthStateChanged(auth, async (user) => {
     if (!user) return cb(null, null);

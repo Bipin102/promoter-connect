@@ -1,11 +1,7 @@
-// Lightweight geolocation + "can this promoter reach this event within an hour"
-// matching. No paid maps/routing API involved — distance is straight-line
-// (haversine) converted to an estimated travel time using an assumed average
-// urban speed. This is an approximation, not real turn-by-turn routing, but is
-// enough to power the "reachable within 1 hour" filter without adding a
-// billing dependency on top of the ones already in play.
+// Straight-line distance turned into a rough travel time. Not real routing,
+// but good enough for "can I get there within the hour".
 
-const ASSUMED_AVG_SPEED_KMH = 25; // conservative dense-urban-traffic estimate
+const ASSUMED_AVG_SPEED_KMH = 25; // city traffic
 
 export function getCurrentLocation({ timeout = 8000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -19,7 +15,7 @@ export function getCurrentLocation({ timeout = 8000 } = {}) {
 }
 
 function mapGeoError(err) {
-  if (err.code === err.PERMISSION_DENIED) return "Location access was denied. You can still use the platform, but nearby-gig matching won't be available.";
+  if (err.code === err.PERMISSION_DENIED) return "Location access was blocked. You can allow it in your browser settings and try again.";
   if (err.code === err.TIMEOUT) return "Location request timed out. Please try again.";
   return "Couldn't get your location. Please try again.";
 }
@@ -42,7 +38,6 @@ export function estimateTravelMinutes(distanceKm) {
   return Math.max(5, Math.round((distanceKm / ASSUMED_AVG_SPEED_KMH) * 60));
 }
 
-/** True when a promoter's saved location is estimated to be reachable within 60 minutes of an event's venue. */
 export function isReachableWithinHour(promoterLoc, eventLoc) {
   const km = haversineDistanceKm(promoterLoc, eventLoc);
   if (km == null) return null; // unknown — one side has no coordinates saved
@@ -53,5 +48,5 @@ export function distanceLabel(promoterLoc, eventLoc) {
   const km = haversineDistanceKm(promoterLoc, eventLoc);
   if (km == null) return null;
   const mins = estimateTravelMinutes(km);
-  return `📍 ${km < 1 ? "<1" : km.toFixed(1)} km away · ~${mins} min travel`;
+  return `${km < 1 ? "Under 1" : km.toFixed(1)} km away, about ${mins} min`;
 }

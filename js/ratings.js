@@ -7,6 +7,15 @@ import { pushNotification } from "./notifications.js";
 const PROMOTER_CATEGORIES = ["professionalism", "punctuality", "communication", "workQuality"];
 const COMPANY_CATEGORIES = ["professionalism", "communication", "workEnvironment", "paymentExperience"];
 
+export const CATEGORY_LABELS = {
+  professionalism: "Professionalism",
+  punctuality: "Punctuality",
+  communication: "Communication",
+  workQuality: "Quality of work",
+  workEnvironment: "Work environment",
+  paymentExperience: "Payment",
+};
+
 export function categoriesFor(fromRole) {
   return fromRole === "company" ? PROMOTER_CATEGORIES : COMPANY_CATEGORIES;
 }
@@ -16,10 +25,7 @@ function average(obj) {
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
 }
 
-/**
- * fromRole: 'company' (rating a promoter) | 'promoter' (rating a company).
- * Only allowed once the booking is COMPLETED, and only once per side (deterministic doc id).
- */
+/** fromRole is who is rating. One rating per side per completed booking (the doc id enforces it). */
 export async function submitRating(booking, fromRole, categories, comment = "") {
   if (booking.status !== "completed") throw new Error("NOT_ELIGIBLE");
 
@@ -60,8 +66,8 @@ export async function submitRating(booking, fromRole, categories, comment = "") 
 
   await pushNotification(toId, {
     type: "new_rating",
-    title: "⭐ You Received a New Rating",
-    message: `You received a ${overall.toFixed(1)}★ rating for "${booking.eventName}".`,
+    title: "New rating",
+    message: `You were rated ${overall.toFixed(1)} out of 5 for ${booking.eventName}.`,
     link: toRole === "promoter" ? "/promoter/ratings.html" : "/company/dashboard.html",
   });
 }
@@ -72,8 +78,7 @@ export async function hasRated(bookingId, fromRole) {
 }
 
 export async function listRatingsFor(toId) {
-  // Sorted client-side so this doesn't depend on a manually-created composite index
-  // (where(toId) + orderBy(createdAt) on different fields needs one otherwise).
+  // Sorted client-side to avoid needing a composite index.
   const snap = await getDocs(query(collection(db, "ratings"), where("toId", "==", toId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));

@@ -2,103 +2,99 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Finish Setting Up — Promoter Connect</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finish setting up · Promoter Connect</title>
+<script>try{var t=localStorage.getItem("pc-theme")}catch(e){}document.documentElement.setAttribute("data-theme",t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"))</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 </head>
 <body>
-<div class="auth-shell">
+<main class="auth-shell" id="main">
   <div class="auth-card">
-    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" /> Promoter Connect</a>
-    <h1 class="auth-title mt-16">Let's finish setting up your account</h1>
-    <p class="auth-sub">We found your login, but your profile wasn't fully created last time. Just pick your role below and you're good to go.</p>
+    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
+    <h1 class="auth-title">Finish setting up</h1>
+    <p class="auth-sub">Your account was created, but signup didn't finish last time. Pick your role to continue.</p>
 
-    <div class="auth-error" id="err"></div>
+    <div class="form-error" id="err" role="alert"></div>
 
-    <form id="complete-form">
-      <div class="field">
-        <label>I am a...</label>
+    <form id="complete-form" novalidate>
+      <fieldset class="field" style="border:0;padding:0;margin:0 0 18px">
+        <legend class="field-label">I'm signing up as</legend>
         <div class="radio-card-group">
           <label class="radio-card" data-role="promoter">
-            <input type="radio" name="role" value="promoter" />
+            <input type="radio" name="role" value="promoter" required />
             <h4>Promoter</h4>
-            <p>I want to find gigs and get booked for events.</p>
+            <p>I want to find gigs and get booked.</p>
           </label>
           <label class="radio-card" data-role="company">
             <input type="radio" name="role" value="company" />
-            <h4>Event company</h4>
-            <p>I hire promoters for events, activations or store promotions.</p>
+            <h4>Company</h4>
+            <p>I hire promoters for events.</p>
           </label>
         </div>
-      </div>
-
+      </fieldset>
       <div class="field">
-        <label id="name-label">Full name</label>
-        <input type="text" id="name" required placeholder="Your name" />
+        <label for="name" id="name-label">Full name</label>
+        <input type="text" id="name" autocomplete="name" required />
       </div>
-
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Continue</button>
     </form>
 
-    <p class="auth-switch"><a href="#" id="logout-link">Not you? Log out</a></p>
+    <p class="auth-switch">Not you? <button type="button" class="link" id="logout-btn" style="background:none;border:0;padding:0;font:inherit">Log out</button></p>
   </div>
-</div>
+</main>
 
 <script type="module">
   import { auth } from "/js/firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { createUserDocs, getUserDoc, logout } from "/js/auth.js";
-  import { toast } from "/js/ui.js";
-  import { mountLayout } from "/js/layout.js";
-  mountLayout();
 
   let currentUser = null;
   onAuthStateChanged(auth, async (user) => {
-    if (!user) { window.location.href = "/auth/login.html"; return; }
-    const existingProfile = await getUserDoc(user.uid);
-    if (existingProfile) {
-      window.location.href = existingProfile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
+    if (!user) { location.href = "/auth/login.html"; return; }
+    const existing = await getUserDoc(user.uid);
+    if (existing) {
+      location.href = existing.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
       return;
     }
     currentUser = user;
     if (user.displayName) document.getElementById("name").value = user.displayName;
   });
 
-  document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
+  document.getElementById("logout-btn").addEventListener("click", logout);
 
   const cards = document.querySelectorAll(".radio-card");
-  cards.forEach((card) => {
-    card.addEventListener("click", () => {
-      cards.forEach((c) => c.classList.remove("selected"));
-      card.classList.add("selected");
-      card.querySelector("input").checked = true;
-      document.getElementById("name-label").textContent =
-        card.dataset.role === "company" ? "Company name" : "Full name";
-    });
-  });
+  function selectRole(card) {
+    cards.forEach((c) => c.classList.toggle("selected", c === card));
+    card.querySelector("input").checked = true;
+    document.getElementById("name-label").textContent = card.dataset.role === "company" ? "Company name" : "Full name";
+  }
+  cards.forEach((card) => card.querySelector("input").addEventListener("change", () => selectRole(card)));
 
   const errBox = document.getElementById("err");
-  function showError(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
+  const showError = (msg) => { errBox.textContent = msg; errBox.classList.add("show"); };
 
   document.getElementById("complete-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     errBox.classList.remove("show");
-    if (!currentUser) return showError("Still confirming your session — please wait a moment and try again.");
+    if (!currentUser) return showError("Still checking your login. Try again in a moment.");
     const role = document.querySelector('input[name="role"]:checked')?.value;
     const name = document.getElementById("name").value.trim();
-    if (!role) return showError("Please select whether you're a Promoter or an Event Company.");
+    if (!role) return showError("Choose whether you're a promoter or a company.");
+    if (!name) return showError("Enter your name.");
 
     const btn = document.getElementById("submit-btn");
-    btn.disabled = true; btn.textContent = "Setting up...";
+    btn.disabled = true; btn.textContent = "Setting up…";
     try {
       await createUserDocs(currentUser, { role, name, email: currentUser.email });
-      toast("Account set up! Complete your profile so you can be discovered.", "success");
-      window.location.href = role === "company" ? "/company/profile.html?onboarding=1" : "/promoter/profile.html?onboarding=1";
-    } catch (err) {
-      showError(err.message || "Something went wrong. Please try again.");
+      location.href = role === "company" ? "/company/profile.html?onboarding=1" : "/promoter/profile.html?onboarding=1";
+    } catch {
+      showError("Something went wrong. Please try again.");
       btn.disabled = false; btn.textContent = "Continue";
     }
   });

@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Promoter Connect: hire event promoters within the hour</title>
-<meta name="description" content="Promoter Connect helps event companies find and confirm promoters within 1 hour, with live event check-ins and two-way ratings." />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="description" content="Post an event, set how many promoters you need, and fill the spots within the hour. Promoters check in from the venue with a photo, and both sides rate each other." />
+<script>try{var t=localStorage.getItem("pc-theme")}catch(e){}document.documentElement.setAttribute("data-theme",t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"))</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 </head>
@@ -15,9 +18,10 @@
 
 <div id="pc-navbar"></div>
 
+<main id="main">
 <header class="hero">
   <div class="container hero-grid">
-    <div class="hero-copy">
+    <div>
       <p class="hero-kicker">Event staffing for agencies and promoters</p>
       <h1>Fill your promoter spots in an hour, not a day of phone calls.</h1>
       <p class="hero-sub">
@@ -128,6 +132,7 @@
     </div>
   </div>
 </section>
+</main>
 
 <div id="pc-footer"></div>
 
@@ -143,8 +148,7 @@
     const host = document.getElementById("hero-jobs");
     try {
       let events = await listOpenEvents();
-      events = events.filter((e) => !e.isDemo);
-      events = await Promise.all(events.map(reconcileUrgentWindow));
+      events = await Promise.all(events.filter((e) => !e.isDemo).map(reconcileUrgentWindow));
       events = events.filter((e) => e.status === "open");
       events.sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"));
       events = events.slice(0, 3);
@@ -167,10 +171,10 @@
         : `<div class="hero-empty">
              <p>Nothing open at the moment.</p>
              <p>Postings appear here as soon as a company publishes one.</p>
-             <a href="/auth/signup.html?role=company">Post a requirement →</a>
+             <a href="/auth/signup.html?role=company">Post a requirement</a>
            </div>`;
     } catch (err) {
-      host.innerHTML = `<p class="text-dim" style="font-size:13px;">Couldn't load postings right now. Try refreshing.</p>`;
+      host.innerHTML = `<p class="hero-empty text-dim">Couldn't load postings right now. Try refreshing the page.</p>`;
     }
   }
 </script>

@@ -1,7 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  doc, getDoc, updateDoc, collection, addDoc, getDocs, query, where,
-  orderBy, limit as fsLimit, deleteDoc
+  doc, getDoc, updateDoc, collection, addDoc, getDocs, query, orderBy, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export async function getPromoter(uid) {
@@ -58,4 +57,3 @@ export async function removePortfolioImage(uid, imgId) {
   await deleteDoc(doc(db, "promoters", uid, "portfolio", imgId));
 }
 
-export { doc, getDoc, updateDoc, collection, addDoc, getDocs, query, where, orderBy, fsLimit };

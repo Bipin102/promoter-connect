@@ -14,10 +14,6 @@ function getLocation() {
   });
 }
 
-/**
- * Submits a live event check-in: uploads the proof photo, captures an optional
- * GPS location, timestamps the submission, and flips the booking to CHECKED IN.
- */
 export async function submitCheckIn(booking, photoFile) {
   const location = await getLocation();
   const photoURL = await uploadImage(`checkins/${booking.id}/${Date.now()}.jpg`, photoFile);
@@ -38,8 +34,8 @@ export async function submitCheckIn(booking, photoFile) {
 
   await pushNotification(booking.companyId, {
     type: "checked_in",
-    title: "📸 Promoter Checked In",
-    message: `${booking.promoterName} just checked in live at "${booking.eventName}".`,
+    title: "Promoter arrived",
+    message: `${booking.promoterName} checked in at ${booking.eventName}.`,
     link: `/company/event.html?id=${booking.eventId}`,
   });
 

@@ -1,82 +1,104 @@
 rules_version = '2';
 
-// Deploy: Firebase Console → Firestore Database → Rules → paste this → Publish
-// (or `firebase deploy --only firestore:rules` if you set up the Firebase CLI).
+// Deploy: Firebase Console → Firestore Database → Rules → paste this → Publish.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSignedIn() { return request.auth != null; }
     function isOwner(id) { return isSignedIn() && request.auth.uid == id; }
-    // Demo docs (admin/seed.html) use ids like "demo_p1" and are writable by any
-    // signed-in user so the seeder works without a service account. They hold no
-    // real personal data.
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    // Sample docs written by admin/seed.html.
     function isDemoId(id) { return id.matches('demo_.*'); }
-    function eventOnlyFulfillmentFieldsChanged() {
-      let allowed = ['positionsFilled', 'status', 'fulfilledAt', 'updatedAt'];
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // There's no backend, so the other party's client keeps these counters up to
+    // date: the company bumps eventsCompleted when it closes an event, and the
+    // rater updates the running average. Only a +1 step on those fields is allowed.
+    function isCounterBump() {
+      return isSignedIn() && (
+        (changedKeys().hasOnly(['eventsCompleted']) &&
+          request.resource.data.eventsCompleted == resource.data.get('eventsCompleted', 0) + 1) ||
+        (changedKeys().hasOnly(['ratingAvg', 'ratingCount']) &&
+          request.resource.data.ratingCount == resource.data.get('ratingCount', 0) + 1 &&
+          request.resource.data.ratingAvg >= 0 && request.resource.data.ratingAvg <= 5)
+      );
+    }
+
+    function ratingBookingAllows(booking) {
+      return booking.status == 'completed' && (
+        (request.resource.data.fromRole == 'promoter' && booking.promoterId == request.auth.uid) ||
+        (request.resource.data.fromRole == 'company' && booking.companyId == request.auth.uid)
+      );
     }
 
     // Admins are added by hand in the Firebase console: create a doc at
-    // admins/{your-auth-uid} (any fields). Nobody can write it from the client.
+    // admins/{auth-uid}. Nobody can write it from the client.
     match /admins/{uid} {
       allow read: if isOwner(uid);
       allow write: if false;
     }
 
     match /users/{uid} {
-      allow read: if isSignedIn();
+      allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
       allow update: if isOwner(uid) && request.resource.data.role == resource.data.role;
     }
 
     match /promoters/{uid} {
       allow read: if isSignedIn();
-      allow write: if isOwner(uid) || (isSignedIn() && isDemoId(uid));
+      allow write: if isOwner(uid) || (isAdmin() && isDemoId(uid));
+      allow update: if isCounterBump();
 
       match /portfolio/{imgId} {
         allow read: if isSignedIn();
-        allow write: if isOwner(uid) || (isSignedIn() && isDemoId(uid));
+        allow write: if isOwner(uid) || (isAdmin() && isDemoId(uid));
       }
     }
 
     match /companies/{uid} {
       allow read: if isSignedIn();
-      allow write: if isOwner(uid) || (isSignedIn() && isDemoId(uid));
+      allow write: if isOwner(uid) || (isAdmin() && isDemoId(uid));
+      allow update: if isCounterBump();
     }
 
     match /events/{eventId} {
-      // Public read: job postings are meant to be discoverable before signup,
-      // like any job board — same as Naukri/LinkedIn Jobs. Nothing sensitive
-      // lives on an event doc (no contact info beyond what a company chose to
-      // publish). Every other collection stays signed-in-only.
+      // Job posts are public so people can see what's open before signing up.
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.companyId == request.auth.uid;
-      // The company that owns the event can fully edit it. Any other signed-in user
-      // (a promoter, via the atomic booking transaction in js/booking.js) may only
-      // ever touch the fulfillment counters — never rewrite the event itself.
+      allow create: if (isSignedIn() && request.resource.data.companyId == request.auth.uid) ||
+        (isAdmin() && isDemoId(eventId));
+      // Other users (a promoter booking a spot, or anyone noticing an expired
+      // urgent window) may only touch the fulfilment fields.
       allow update: if isSignedIn() && (
         resource.data.companyId == request.auth.uid ||
-        isDemoId(eventId) ||
-        eventOnlyFulfillmentFieldsChanged()
+        (isAdmin() && isDemoId(eventId)) ||
+        changedKeys().hasOnly(['positionsFilled', 'status', 'fulfilledAt', 'updatedAt'])
       );
       allow delete: if isOwner(resource.data.companyId);
     }
 
     match /applications/{appId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.promoterId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.promoterId == request.auth.uid &&
+        request.resource.data.status == 'pending';
       allow update: if isSignedIn() &&
         get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.companyId == request.auth.uid;
     }
 
     match /bookings/{bookingId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && (
+      allow create: if isSignedIn() && request.resource.data.status == 'booked' && (
         request.resource.data.promoterId == request.auth.uid ||
         request.resource.data.companyId == request.auth.uid
       );
+      // Promoters move their own booking along; only the company can complete it.
       allow update: if isSignedIn() && (
-        resource.data.promoterId == request.auth.uid || resource.data.companyId == request.auth.uid
+        (resource.data.promoterId == request.auth.uid &&
+          changedKeys().hasOnly(['status', 'updatedAt']) &&
+          request.resource.data.status in ['on_the_way', 'checked_in', 'cancelled']) ||
+        (resource.data.companyId == request.auth.uid &&
+          changedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']))
       );
     }
 
@@ -87,17 +109,19 @@ service cloud.firestore {
 
     match /ratings/{ratingId} {
       allow read: if isSignedIn();
-      // Only the participant on a COMPLETED booking can rate, and only once per side
-      // (enforced by the deterministic `${bookingId}_${fromRole}` doc id in js/ratings.js).
-      allow create: if isSignedIn() && request.resource.data.fromId == request.auth.uid &&
-        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.status == 'completed';
+      // Only someone on a completed booking can rate, once per side
+      // (the `${bookingId}_${fromRole}` doc id in js/ratings.js).
+      allow create: if (isAdmin() && isDemoId(ratingId)) || (
+        isSignedIn() && request.resource.data.fromId == request.auth.uid &&
+        request.resource.data.overall >= 1 && request.resource.data.overall <= 5 &&
+        ratingBookingAllows(get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data)
+      );
     }
 
     match /notifications/{id} {
       allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // Created by whichever client performs the triggering action (booking, rating, etc.)
-      // on behalf of the *other* party's inbox — there is no backend function in this MVP
-      // to do it server-side. Tighten this with Cloud Functions in production.
+      // Written by the client of whoever triggered it (no backend). Contents are
+      // escaped wherever they're shown.
       allow create: if isSignedIn();
     }
 

@@ -2,91 +2,92 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>try{document.documentElement.setAttribute("data-theme", localStorage.getItem("pc-theme") || "dark");}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Log In — Promoter Connect</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Log in · Promoter Connect</title>
+<script>try{var t=localStorage.getItem("pc-theme")}catch(e){}document.documentElement.setAttribute("data-theme",t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"))</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 </head>
 <body>
-<div class="auth-shell">
+<main class="auth-shell" id="main">
   <div class="auth-card">
-    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" /> Promoter Connect</a>
-    <h1 class="auth-title mt-16">Welcome back</h1>
-    <p class="auth-sub">Log in to your dashboard.</p>
+    <a href="/index.html" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
+    <h1 class="auth-title">Log in</h1>
+    <p class="auth-sub">Welcome back.</p>
 
-    <div class="auth-error" id="err"></div>
+    <div class="form-error" id="err" role="alert"></div>
 
-    <form id="login-form">
+    <form id="login-form" novalidate>
       <div class="field">
-        <label>Email</label>
-        <input type="email" id="email" required placeholder="you@example.com" />
+        <label for="email">Email</label>
+        <input type="email" id="email" autocomplete="email" required />
       </div>
       <div class="field">
-        <label>Password</label>
-        <input type="password" id="password" required placeholder="Your password" />
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" required />
       </div>
-      <div class="flex-between mb-16">
-        <span></span>
-        <a href="#" id="forgot-link" style="font-size:13px;color:var(--pink-soft);font-weight:600;">Forgot password?</a>
-      </div>
+      <div class="forgot-row"><button type="button" id="forgot-btn">Forgot password?</button></div>
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Log in</button>
     </form>
 
-    <p class="auth-switch">New to Promoter Connect? <a href="/auth/signup.html">Create an account</a></p>
+    <p class="auth-switch">New here? <a href="/auth/signup.html">Create an account</a></p>
   </div>
-</div>
+</main>
 
 <script type="module">
   import { login, resetPassword, getUserDoc } from "/js/auth.js";
   import { toast } from "/js/ui.js";
-  import { mountLayout } from "/js/layout.js";
-  mountLayout();
 
   const errBox = document.getElementById("err");
-  function showError(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
+  const showError = (msg) => { errBox.textContent = msg; errBox.classList.add("show"); };
 
   document.getElementById("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     errBox.classList.remove("show");
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
+    if (!email || !password) return showError("Enter your email and password.");
+
     const btn = document.getElementById("submit-btn");
-    btn.disabled = true; btn.textContent = "Logging in...";
+    btn.disabled = true; btn.textContent = "Logging in…";
     try {
       const user = await login(email, password);
       const profile = await getUserDoc(user.uid);
-      if (!profile) {
-        window.location.href = "/auth/complete-profile.html";
-        return;
-      }
-      window.location.href = profile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
+      if (!profile) location.href = "/auth/complete-profile.html";
+      else location.href = profile.role === "company" ? "/company/dashboard.html" : "/promoter/dashboard.html";
     } catch (err) {
-      showError(mapAuthError(err));
+      showError(authErrorMessage(err));
       btn.disabled = false; btn.textContent = "Log in";
     }
   });
 
-  document.getElementById("forgot-link").addEventListener("click", async (e) => {
-    e.preventDefault();
+  document.getElementById("forgot-btn").addEventListener("click", async () => {
+    errBox.classList.remove("show");
     const email = document.getElementById("email").value.trim();
-    if (!email) return showError("Enter your email above first, then click 'Forgot password?' again.");
+    if (!email) {
+      document.getElementById("email").focus();
+      return showError("Enter your email above and we'll send you a reset link.");
+    }
     try {
       await resetPassword(email);
-      toast("Password reset email sent. Check your inbox.", "success");
+      toast(`If there's an account for ${email}, a reset link is on its way.`, "success", 6000);
     } catch (err) {
-      showError(mapAuthError(err));
+      showError(authErrorMessage(err));
     }
   });
 
-  function mapAuthError(err) {
+  function authErrorMessage(err) {
     const code = err.code || "";
-    if (code.includes("user-not-found") || code.includes("invalid-credential")) return "No account found with these credentials.";
-    if (code.includes("wrong-password")) return "Incorrect password.";
-    if (code.includes("invalid-email")) return "Please enter a valid email address.";
-    if (code.includes("too-many-requests")) return "Too many attempts. Please try again later.";
-    return err.message || "Something went wrong. Please try again.";
+    if (code.includes("user-not-found") || code.includes("invalid-credential") || code.includes("wrong-password")) return "That email and password don't match an account.";
+    if (code.includes("invalid-email")) return "That email address doesn't look right.";
+    if (code.includes("too-many-requests")) return "Too many attempts. Wait a few minutes and try again.";
+    if (code.includes("network-request-failed")) return "You seem to be offline. Check your connection and try again.";
+    return "Something went wrong. Please try again.";
   }
 </script>
 </body>
