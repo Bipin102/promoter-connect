@@ -140,6 +140,18 @@ export function requireAdmin() {
   });
 }
 
+/** Resolves once with { user, profile } for whoever is signed in, or null. Never redirects. */
+export function getSession() {
+  return new Promise((resolve) => {
+    const stop = onAuthStateChanged(auth, async (user) => {
+      stop();
+      if (!user) return resolve(null);
+      const profile = await getUserDoc(user.uid);
+      resolve(profile ? { user, profile } : null);
+    });
+  });
+}
+
 /** For public pages and the navbar: reports the signed-in user (or null) without redirecting. */
 export function watchAuth(cb) {
   onAuthStateChanged(auth, async (user) => {

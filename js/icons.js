@@ -18,6 +18,9 @@ const PATHS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   arrowLeft: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
   navigation: '<path d="m3 11 19-9-9 19-2-8-8-2z"/>',
+  wallet: '<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+  zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  star: '<path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
 };
 
 export function icon(name, size = 16) {

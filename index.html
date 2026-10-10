@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Promoter Connect: hire event promoters within the hour</title>
-<meta name="description" content="Post an event, set how many promoters you need, and fill the spots within the hour. Promoters check in from the venue with a photo, and both sides rate each other." />
+<title>Promoter Connect: event gigs and promoters, booked within the hour</title>
+<meta name="description" content="Find paid event gigs as a promoter, or post an event and fill your spots within the hour. Sampling, brand activations, store launches and exhibitions." />
 <script>try{var t=localStorage.getItem("pc-theme")}catch(e){}document.documentElement.setAttribute("data-theme",t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"))</script>
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
 <link rel="apple-touch-icon" href="/assets/icon-180.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 </head>
@@ -19,119 +19,60 @@
 <div id="pc-navbar"></div>
 
 <main id="main">
-<header class="hero">
-  <div class="container hero-grid">
-    <div>
-      <p class="hero-kicker">Event staffing for agencies and promoters</p>
-      <h1>Fill your promoter spots in an hour, not a day of phone calls.</h1>
-      <p class="hero-sub">
-        Post the event, say how many people you need, and promoters nearby book the spots
-        themselves. You see each confirmation as it lands, and every promoter checks in
-        with a photo when they reach the venue.
-      </p>
-      <div class="hero-actions">
-        <a href="/auth/signup?role=company" class="btn btn-primary btn-lg">I need promoters</a>
-        <a href="/auth/signup?role=promoter" class="btn btn-secondary btn-lg">I'm a promoter</a>
+  <section class="home-hero">
+    <div class="container">
+      <h1>Promoters for every event. <em>Booked within the hour.</em></h1>
+      <p class="home-sub">Sampling, brand activations, store launches and exhibitions. Find paid gigs near you, or post one and fill it fast.</p>
+
+      <form class="home-search" action="/promoter/jobs" role="search">
+        <span class="home-search-icon" id="search-icon"></span>
+        <label for="home-q" class="sr-only">Search gigs</label>
+        <input id="home-q" name="q" type="search" placeholder="Search by city, brand or role" autocomplete="off" />
+        <button type="submit" class="btn">Find</button>
+      </form>
+
+      <div class="home-chips" aria-label="Popular searches">
+        <a href="/promoter/jobs?q=Sampling">Sampling</a>
+        <a href="/promoter/jobs?q=Brand%20activation">Brand activation</a>
+        <a href="/promoter/jobs?q=Store%20launch">Store launch</a>
+        <a href="/promoter/jobs?q=Exhibition">Exhibition</a>
+        <a href="/promoter/jobs?q=Retail">Retail</a>
+        <a href="/promoter/jobs?type=urgent">Urgent gigs</a>
       </div>
-      <p class="hero-note">Built by a promoter, for promoters.</p>
+
+      <div class="home-ctas">
+        <a href="/promoter/jobs" class="btn btn-lg home-cta-main">I'm a promoter <span aria-hidden="true">→</span></a>
+        <a href="/auth/signup?role=company" class="btn btn-lg btn-secondary">I'm a brand / agency <span aria-hidden="true">→</span></a>
+      </div>
     </div>
+  </section>
 
-    <aside class="hero-panel">
-      <div class="hero-panel-head">
-        <h2>Open right now</h2>
-        <span><span class="live-dot"></span>Live</span>
+  <section class="home-open hidden" id="open-now">
+    <div class="container">
+      <div class="home-section-head">
+        <h2><span class="live-dot"></span>Open now</h2>
+        <a href="/promoter/jobs">See all gigs</a>
       </div>
-      <div id="hero-jobs"><div class="loading-state"><div class="spinner"></div></div></div>
-    </aside>
-  </div>
-</header>
+      <div class="list" id="open-list"></div>
+    </div>
+  </section>
 
-<section class="section landing-section" id="how-it-works">
-  <div class="container">
-    <h2 class="landing-title">How it works</h2>
-    <div class="steps-grid">
+  <section class="home-perks">
+    <div class="container">
+      <h2 class="home-title">What you get as a promoter</h2>
+      <div class="perk-grid" id="perks"></div>
+    </div>
+  </section>
+
+  <section class="home-band">
+    <div class="container home-band-inner">
       <div>
-        <h3 class="steps-head">If you're hiring</h3>
-        <ol class="steps">
-          <li><strong>Post the event.</strong> Date, venue, pay, how many people, and anything specific like dress code or gender.</li>
-          <li><strong>Choose normal or urgent.</strong> Urgent posts get a 60-minute window and sit at the top of the job list with a countdown.</li>
-          <li><strong>Watch the spots fill.</strong> Bookings confirm instantly, and two people can never take the same last spot.</li>
-          <li><strong>See who's arrived.</strong> Promoters check in from the venue with a photo, plus their location if they allow it.</li>
-          <li><strong>Close it out.</strong> Mark the event complete and rate each promoter.</li>
-        </ol>
+        <h2>Hiring for an event?</h2>
+        <p>Post it, set how many people you need, and watch the spots fill.</p>
       </div>
-      <div>
-        <h3 class="steps-head">If you're a promoter</h3>
-        <ol class="steps">
-          <li><strong>Set up your profile.</strong> Photo, city, languages, and the brands you've worked with.</li>
-          <li><strong>Find gigs.</strong> Filter by city, date, category or pay.</li>
-          <li><strong>Apply or book.</strong> Apply to normal posts. Urgent spots are first come, first served, so you can book them straight away.</li>
-          <li><strong>Check in at the venue.</strong> One photo when you get there, and the company knows you've arrived.</li>
-          <li><strong>Rate them back.</strong> After the event you rate the company too, including how the payment went.</li>
-        </ol>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section landing-section landing-alt" id="features">
-  <div class="container">
-    <h2 class="landing-title" id="why">Why we built it this way</h2>
-    <p class="landing-lede">
-      Most promoter hiring still happens through WhatsApp groups and a long list of phone
-      numbers. That works until you need six people by this evening. A few things we cared about:
-    </p>
-    <div class="points">
-      <div class="point">
-        <h3>"Urgent" means one hour</h3>
-        <p>If the hour runs out before every spot is filled, the post says so. You can reopen it, edit it, or cancel. It won't pretend you're fully staffed.</p>
-      </div>
-      <div class="point">
-        <h3>Proof that people turned up</h3>
-        <p>Check-in photos are separate from profile pictures and are taken at the venue, so you're not relying on a "reached" message.</p>
-      </div>
-      <div class="point">
-        <h3>Ratings go both ways</h3>
-        <p>Companies rate promoters on punctuality and work. Promoters rate companies on how they were treated and paid. Badges come from those numbers, not from us.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section landing-section">
-  <div class="container faq-wrap">
-    <h2 class="landing-title">Questions people ask</h2>
-    <div class="faq">
-      <details>
-        <summary>Is it only for last-minute hiring?</summary>
-        <p>No. Normal posts work like a regular job listing: promoters apply and you pick who to confirm. Urgent is there for when you're short on the day.</p>
-      </details>
-      <details>
-        <summary>What happens if nobody books in the hour?</summary>
-        <p>The post is marked as "window ended" with however many people did book. You decide whether to reopen it for longer or cancel it.</p>
-      </details>
-      <details>
-        <summary>How do I know a promoter is reliable?</summary>
-        <p>Every profile shows how many events they've completed and their ratings from companies they've worked with. A rating can only be left after an event is marked complete.</p>
-      </details>
-      <details>
-        <summary>Can I use one account as both a promoter and a company?</summary>
-        <p>Each account is one or the other. If you need both, sign up a second time with a different email.</p>
-      </details>
-    </div>
-  </div>
-</section>
-
-<section class="section landing-cta">
-  <div class="container">
-    <h2>Got an event coming up?</h2>
-    <p>Sign up, post it, and see who's available.</p>
-    <div class="hero-actions">
       <a href="/auth/signup?role=company" class="btn btn-primary btn-lg">Post an event</a>
-      <a href="/auth/signup?role=promoter" class="btn btn-secondary btn-lg">Join as a promoter</a>
     </div>
-  </div>
-</section>
+  </section>
 </main>
 
 <div id="pc-footer"></div>
@@ -139,43 +80,46 @@
 <script type="module">
   import { mountLayout } from "/js/layout.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
-  import { fmtDate, escapeHTML } from "/js/ui.js";
+  import { fmtDate, fmtMoney, escapeHTML } from "/js/ui.js";
+  import { icon } from "/js/icons.js";
 
   mountLayout();
-  loadHeroJobs();
+  document.getElementById("search-icon").innerHTML = icon("search", 18);
 
-  async function loadHeroJobs() {
-    const host = document.getElementById("hero-jobs");
-    try {
-      let events = await listOpenEvents();
-      events = await Promise.all(events.filter((e) => !e.isDemo).map(reconcileUrgentWindow));
-      events = events.filter((e) => e.status === "open");
-      events.sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"));
-      events = events.slice(0, 3);
+  const PERKS = [
+    ["wallet", "Pay shown upfront", "Every gig lists what it pays before you apply.", "green"],
+    ["zap", "Book urgent gigs instantly", "No waiting to hear back. First come, first served.", "orange"],
+    ["navigation", "Gigs near you", "See how far each venue is and if you'll make it in time.", "blue"],
+    ["star", "Rate the companies", "Tell other promoters how you were treated and paid.", "amber"],
+    ["user", "A profile that grows", "Your ratings and completed events, all in one place.", "violet"],
+    ["bell", "Instant updates", "Get notified the moment you're booked or plans change.", "pink"],
+  ];
+  document.getElementById("perks").innerHTML = PERKS.map(([iconName, title, text, tint]) => `
+    <div class="perk perk--${tint}">
+      <div class="perk-icon">${icon(iconName, 24)}</div>
+      <h3>${title}</h3>
+      <p>${text}</p>
+    </div>`).join("");
 
-      host.innerHTML = events.length
-        ? events.map((e) => {
-            const remaining = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
-            return `
-            <a href="/auth/signup?role=promoter" class="hero-job">
-              <div>
-                <strong>${escapeHTML(e.eventName)}</strong>
-                <p>${escapeHTML(e.location)} · ${fmtDate(e.date)}</p>
-              </div>
-              <div class="hero-job-meta">
-                ${e.hiringType === "urgent" ? `<span class="badge badge-urgent">Urgent</span>` : ""}
-                <span>${remaining} ${remaining === 1 ? "spot" : "spots"} left</span>
-              </div>
-            </a>`;
-          }).join("")
-        : `<div class="hero-empty">
-             <p>Nothing open at the moment.</p>
-             <p>Postings appear here as soon as a company publishes one.</p>
-             <a href="/auth/signup?role=company">Post a requirement</a>
-           </div>`;
-    } catch (err) {
-      host.innerHTML = `<p class="hero-empty text-dim">Couldn't load postings right now. Try refreshing the page.</p>`;
+  try {
+    let events = await listOpenEvents();
+    events = await Promise.all(events.filter((e) => !e.isDemo).map(reconcileUrgentWindow));
+    events = events.filter((e) => e.status === "open")
+      .sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"))
+      .slice(0, 3);
+    if (events.length) {
+      document.getElementById("open-list").innerHTML = events.map((e) => `
+        <a href="/promoter/jobs" class="list-row">
+          <div class="list-row-main">
+            <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}</div>
+            <div class="list-row-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
+          </div>
+          <div class="list-row-side"><strong>${fmtMoney(e.paymentAmount)}</strong></div>
+        </a>`).join("");
+      document.getElementById("open-now").classList.remove("hidden");
     }
+  } catch {
+    // The open-gigs strip is optional; the page works without it.
   }
 </script>
 </body>

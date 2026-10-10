@@ -45,7 +45,7 @@
 
   <div class="results-meta">
     <span id="result-count" aria-live="polite"></span>
-    <label class="checkbox">
+    <label class="checkbox" id="reach-filter">
       <input type="checkbox" id="f-reachable" />
       <span>Only gigs I can reach within an hour</span>
     </label>
@@ -64,7 +64,7 @@
 <div id="pc-footer"></div>
 
 <script type="module">
-  import { requireAuth } from "/js/auth.js";
+  import { getSession } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { getPromoter } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
@@ -73,18 +73,22 @@
   import { toast, openModal, escapeHTML, skeletonCards, fmtDate, fmtTimeRange, fmtMoney } from "/js/ui.js";
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
-  mountLayout({ role: "promoter" });
-  const { user } = await requireAuth("promoter");
-  const promoter = await getPromoter(user.uid);
+  // Anyone can browse gigs; booking or applying needs a promoter account.
+  const session = await getSession();
+  if (session?.profile.role === "company") location.replace("/company/dashboard");
+  const isPromoter = session?.profile.role === "promoter";
+  mountLayout({ role: isPromoter ? "promoter" : null });
+  const promoter = isPromoter ? await getPromoter(session.user.uid) : null;
 
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   if (params.get("q")) $("f-keyword").value = params.get("q");
   if (["urgent", "normal"].includes(params.get("type"))) $("f-type").value = params.get("type");
 
-  const hasLocation = promoter.location?.lat != null;
-  $("no-location-hint").classList.toggle("hidden", hasLocation);
+  const hasLocation = promoter?.location?.lat != null;
+  $("no-location-hint").classList.toggle("hidden", !promoter || hasLocation);
   $("f-reachable").disabled = !hasLocation;
+  $("reach-filter").classList.toggle("hidden", !promoter);
 
   const resultsEl = $("results");
   let events = [];
@@ -139,6 +143,10 @@
   });
 
   function profileIncomplete() {
+    if (!promoter) {
+      location.href = "/auth/signup?role=promoter";
+      return true;
+    }
     if (promoter.city && promoter.fullName) return false;
     toast("Add your name and city to your profile before applying.", "error");
     return true;

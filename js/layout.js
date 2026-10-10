@@ -4,8 +4,7 @@ import { icon } from "./icons.js";
 
 const NAV = {
   guest: [
-    ["How it works", "/#how-it-works"],
-    ["For promoters", "/auth/signup?role=promoter"],
+    ["Find gigs", "/promoter/jobs"],
     ["For companies", "/auth/signup?role=company"],
   ],
   promoter: [
@@ -93,8 +92,11 @@ function renderNav(host, links, actionsHTML, { search = false, menuExtra = "" } 
   });
 }
 
+const GUEST_TABS = [["Home", "/", "home"], ["Gigs", "/promoter/jobs", "briefcase"], ["Log in", "/auth/login", "user"]];
+
 function mountBottomNav(role) {
-  const items = NAV[role].filter(([, , iconName]) => iconName);
+  const items = role ? NAV[role].filter(([, , iconName]) => iconName) : GUEST_TABS;
+  document.querySelector(".pc-bottom-nav")?.remove();
   const nav = document.createElement("nav");
   nav.className = "pc-bottom-nav";
   nav.setAttribute("aria-label", "Sections");
@@ -123,8 +125,7 @@ function renderFooter(host, signedIn) {
             <p class="pc-footer-tagline">Built by a promoter, for promoters. Event staffing without the WhatsApp chase.</p>
           </div>
           <div class="pc-footer-links">
-            <a href="/#how-it-works">How it works</a>
-            <a href="/auth/signup?role=promoter">Find gigs</a>
+            <a href="/promoter/jobs">Find gigs</a>
             <a href="/auth/signup?role=company">Hire promoters</a>
             <a href="/auth/login">Log in</a>
           </div>
@@ -152,7 +153,7 @@ export function mountLayout({ role = null } = {}) {
     search: showSearch(role),
     menuExtra: role ? "" : `<a href="/auth/login" class="pc-nav-mobile-extra">Log in</a>`,
   });
-  if (role) mountBottomNav(role);
+  mountBottomNav(role);
 
   watchAuth(async (user, profile) => {
     if (!user || !profile) return;
@@ -164,7 +165,10 @@ export function mountLayout({ role = null } = {}) {
       search: showSearch(profile.role),
       menuExtra: `<button class="pc-nav-mobile-extra pc-nav-mobile-logout" data-logout>Log out</button>`,
     });
-    if (footHost && !role) renderFooter(footHost, true);
+    if (!role) {
+      if (footHost) renderFooter(footHost, true);
+      mountBottomNav(profile.role);
+    }
     mountNotificationBell(user.uid);
   });
 }
