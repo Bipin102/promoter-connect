@@ -92,10 +92,8 @@ function renderNav(host, links, actionsHTML, { search = false, menuExtra = "" } 
   });
 }
 
-const GUEST_TABS = [["Home", "/", "home"], ["Gigs", "/promoter/jobs", "briefcase"], ["Log in", "/auth/login", "user"]];
-
 function mountBottomNav(role) {
-  const items = role ? NAV[role].filter(([, , iconName]) => iconName) : GUEST_TABS;
+  const items = NAV[role].filter(([, , iconName]) => iconName);
   document.querySelector(".pc-bottom-nav")?.remove();
   const nav = document.createElement("nav");
   nav.className = "pc-bottom-nav";
@@ -153,7 +151,7 @@ export function mountLayout({ role = null } = {}) {
     search: showSearch(role),
     menuExtra: role ? "" : `<a href="/auth/login" class="pc-nav-mobile-extra">Log in</a>`,
   });
-  mountBottomNav(role);
+  if (role) mountBottomNav(role);
 
   watchAuth(async (user, profile) => {
     if (!user || !profile) return;

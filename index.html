@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="/assets/icon-180.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/css/main.css" />
 <link rel="stylesheet" href="/css/components.css" />
 </head>
@@ -19,58 +19,50 @@
 <div id="pc-navbar"></div>
 
 <main id="main">
-  <section class="home-hero">
-    <div class="container">
-      <h1>Promoters for every event. <em>Booked within the hour.</em></h1>
-      <p class="home-sub">Sampling, brand activations, store launches and exhibitions. Find paid gigs near you, or post one and fill it fast.</p>
-
-      <form class="home-search" action="/promoter/jobs" role="search">
-        <span class="home-search-icon" id="search-icon"></span>
-        <label for="home-q" class="sr-only">Search gigs</label>
-        <input id="home-q" name="q" type="search" placeholder="Search by city, brand or role" autocomplete="off" />
-        <button type="submit" class="btn">Find</button>
-      </form>
-
-      <div class="home-chips" aria-label="Popular searches">
-        <a href="/promoter/jobs?q=Sampling">Sampling</a>
-        <a href="/promoter/jobs?q=Brand%20activation">Brand activation</a>
-        <a href="/promoter/jobs?q=Store%20launch">Store launch</a>
-        <a href="/promoter/jobs?q=Exhibition">Exhibition</a>
-        <a href="/promoter/jobs?q=Retail">Retail</a>
-        <a href="/promoter/jobs?type=urgent">Urgent gigs</a>
-      </div>
-
-      <div class="home-ctas">
-        <a href="/promoter/jobs" class="btn btn-lg home-cta-main">I'm a promoter <span aria-hidden="true">→</span></a>
-        <a href="/auth/signup?role=company" class="btn btn-lg btn-secondary">I'm a brand / agency <span aria-hidden="true">→</span></a>
-      </div>
-    </div>
-  </section>
-
-  <section class="home-open hidden" id="open-now">
-    <div class="container">
-      <div class="home-section-head">
-        <h2><span class="live-dot"></span>Open now</h2>
-        <a href="/promoter/jobs">See all gigs</a>
-      </div>
-      <div class="list" id="open-list"></div>
-    </div>
-  </section>
-
-  <section class="home-perks">
-    <div class="container">
-      <h2 class="home-title">What you get as a promoter</h2>
-      <div class="perk-grid" id="perks"></div>
-    </div>
-  </section>
-
-  <section class="home-band">
-    <div class="container home-band-inner">
+  <section class="lp-hero">
+    <div class="container lp-hero-grid">
       <div>
-        <h2>Hiring for an event?</h2>
-        <p>Post it, set how many people you need, and watch the spots fill.</p>
+        <p class="lp-eyebrow">Event staffing, made simple</p>
+        <h1>Find event work. Fill event shifts.</h1>
+        <p class="lp-lede">Promoter Connect links promoters with the agencies and brands running sampling drives, activations, store launches and exhibitions. Need people today? Post an urgent shift and promoters can book it straight away.</p>
+
+        <form class="lp-search" action="/promoter/jobs" role="search">
+          <label for="home-q" class="sr-only">Search gigs</label>
+          <span class="lp-search-icon" id="search-icon"></span>
+          <input id="home-q" name="q" type="search" placeholder="City, brand or type of work" autocomplete="off" />
+          <button type="submit" class="btn btn-primary">Search gigs</button>
+        </form>
+        <p class="lp-popular">Popular:
+          <a href="/promoter/jobs?q=Sampling">Sampling</a>
+          <a href="/promoter/jobs?q=Brand%20activation">Brand activation</a>
+          <a href="/promoter/jobs?q=Exhibition">Exhibition</a>
+          <a href="/promoter/jobs?type=urgent">Urgent</a>
+        </p>
+        <p class="lp-hiring">Hiring for an event? <a href="/auth/signup?role=company">Post it here</a></p>
       </div>
-      <a href="/auth/signup?role=company" class="btn btn-primary btn-lg">Post an event</a>
+
+      <aside class="lp-panel" aria-labelledby="panel-title">
+        <div class="lp-panel-head">
+          <h2 id="panel-title">Open gigs</h2>
+          <a href="/promoter/jobs">View all</a>
+        </div>
+        <div id="open-list"><div class="loading-state"><div class="spinner"></div></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="lp-features">
+    <div class="container lp-feature-grid">
+      <div>
+        <h2>For promoters</h2>
+        <ul class="lp-list" id="promoter-points"></ul>
+        <a class="btn btn-secondary" href="/auth/signup?role=promoter">Create a promoter profile</a>
+      </div>
+      <div>
+        <h2>For agencies and brands</h2>
+        <ul class="lp-list" id="company-points"></ul>
+        <a class="btn btn-secondary" href="/auth/signup?role=company">Post your first event</a>
+      </div>
     </div>
   </section>
 </main>
@@ -84,42 +76,49 @@
   import { icon } from "/js/icons.js";
 
   mountLayout();
-  document.getElementById("search-icon").innerHTML = icon("search", 18);
+  document.getElementById("search-icon").innerHTML = icon("search", 17);
 
-  const PERKS = [
-    ["wallet", "Pay shown upfront", "Every gig lists what it pays before you apply.", "green"],
-    ["zap", "Book urgent gigs instantly", "No waiting to hear back. First come, first served.", "orange"],
-    ["navigation", "Gigs near you", "See how far each venue is and if you'll make it in time.", "blue"],
-    ["star", "Rate the companies", "Tell other promoters how you were treated and paid.", "amber"],
-    ["user", "A profile that grows", "Your ratings and completed events, all in one place.", "violet"],
-    ["bell", "Instant updates", "Get notified the moment you're booked or plans change.", "pink"],
-  ];
-  document.getElementById("perks").innerHTML = PERKS.map(([iconName, title, text, tint]) => `
-    <div class="perk perk--${tint}">
-      <div class="perk-icon">${icon(iconName, 24)}</div>
-      <h3>${title}</h3>
-      <p>${text}</p>
-    </div>`).join("");
+  const point = ([iconName, title, text]) => `
+    <li>
+      <span class="lp-list-icon">${icon(iconName, 18)}</span>
+      <div><h3>${title}</h3><p>${text}</p></div>
+    </li>`;
+  document.getElementById("promoter-points").innerHTML = [
+    ["wallet", "Pay listed on every gig", "You see what a gig pays before you apply."],
+    ["zap", "Book urgent spots directly", "No waiting to hear back. First to book gets it."],
+    ["navigation", "Know if you can make it", "Each venue shows its distance and rough travel time."],
+  ].map(point).join("");
+  document.getElementById("company-points").innerHTML = [
+    ["clock", "Fill shifts within the hour", "Urgent posts stay open for 60 minutes with a live count."],
+    ["pin", "Proof of arrival", "Promoters check in from the venue with a photo."],
+    ["star", "Ratings both ways", "Hire on track record, and earn one of your own."],
+  ].map(point).join("");
 
+  const openList = document.getElementById("open-list");
   try {
     let events = await listOpenEvents();
     events = await Promise.all(events.filter((e) => !e.isDemo).map(reconcileUrgentWindow));
     events = events.filter((e) => e.status === "open")
       .sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent"))
-      .slice(0, 3);
-    if (events.length) {
-      document.getElementById("open-list").innerHTML = events.map((e) => `
-        <a href="/promoter/jobs" class="list-row">
-          <div class="list-row-main">
-            <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}</div>
-            <div class="list-row-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
+      .slice(0, 4);
+    openList.innerHTML = events.length
+      ? events.map((e) => `
+        <a href="/promoter/jobs" class="lp-gig">
+          <div>
+            <div class="lp-gig-title">${escapeHTML(e.eventName)}</div>
+            <div class="lp-gig-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
           </div>
-          <div class="list-row-side"><strong>${fmtMoney(e.paymentAmount)}</strong></div>
-        </a>`).join("");
-      document.getElementById("open-now").classList.remove("hidden");
-    }
+          <div class="lp-gig-side">
+            <strong>${fmtMoney(e.paymentAmount)}</strong>
+            ${e.hiringType === "urgent" ? `<span class="badge badge-urgent">Urgent</span>` : ""}
+          </div>
+        </a>`).join("")
+      : `<div class="lp-empty">
+           <p>No open gigs right now.</p>
+           <p>New posts appear here as soon as they're published.</p>
+         </div>`;
   } catch {
-    // The open-gigs strip is optional; the page works without it.
+    openList.innerHTML = `<div class="lp-empty"><p>Couldn't load gigs. Try refreshing.</p></div>`;
   }
 </script>
 </body>
