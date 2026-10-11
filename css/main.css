@@ -126,7 +126,7 @@ a:focus-visible, button:focus-visible { border-radius: var(--radius-sm); }
   display: flex; align-items: center; gap: 24px;
 }
 .pc-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; white-space: nowrap; min-height: 40px; }
-.pc-logo-mark { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.pc-logo-mark { width: 28px; height: 28px; border-radius: 22%; object-fit: cover; flex-shrink: 0; }
 .pc-nav-links { display: flex; align-items: center; gap: 2px; }
 .pc-nav-links a {
   font-size: 14px; color: var(--text-dim); font-weight: 500; white-space: nowrap;
