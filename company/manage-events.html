@@ -44,17 +44,19 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
+  import { pendingApplicationCounts } from "/js/booking.js";
   import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
   import { fmtDate, escapeHTML, statusPill, initTabs } from "/js/ui.js";
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
-  const events = await Promise.all((await listCompanyEvents(user.uid)).map(reconcileUrgentWindow));
+  const [rawEvents, pendingApps] = await Promise.all([listCompanyEvents(user.uid), pendingApplicationCounts(user.uid)]);
+  const events = await Promise.all(rawEvents.map(reconcileUrgentWindow));
 
   const eventRow = (e) => `
     <a href="/company/event?id=${encodeURIComponent(e.id)}" class="list-row">
       <div class="list-row-main">
-        <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}</div>
+        <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}${pendingApps[e.id] && ["open", "fulfilled"].includes(e.status) ? ` <span class="badge badge-accent">${pendingApps[e.id]} applied</span>` : ""}</div>
         <div class="list-row-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
       </div>
       <div class="list-row-side">

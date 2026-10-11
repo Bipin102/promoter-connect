@@ -117,9 +117,29 @@ export async function applyToEvent(eventId, promoter) {
   });
 }
 
-export async function listApplicationsForEvent(eventId) {
-  const snap = await getDocs(query(collection(db, "applications"), where("eventId", "==", eventId)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+const byAppliedAt = (a, b) => (a.appliedAt?.toMillis?.() || 0) - (b.appliedAt?.toMillis?.() || 0);
+
+/** Live list of an event's applications, oldest first. */
+export function watchApplicationsForEvent(eventId, cb) {
+  const q = query(collection(db, "applications"), where("eventId", "==", eventId));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byAppliedAt)));
+}
+
+/** Pending application count per event, for a company's lists. */
+export async function pendingApplicationCounts(companyId) {
+  const snap = await getDocs(query(collection(db, "applications"), where("companyId", "==", companyId)));
+  const counts = {};
+  snap.docs.forEach((d) => {
+    const a = d.data();
+    if (a.status === "pending") counts[a.eventId] = (counts[a.eventId] || 0) + 1;
+  });
+  return counts;
+}
+
+/** eventId -> application status, for a promoter's job list. */
+export async function promoterApplicationStatuses(promoterId) {
+  const snap = await getDocs(query(collection(db, "applications"), where("promoterId", "==", promoterId)));
+  return Object.fromEntries(snap.docs.map((d) => [d.data().eventId, d.data().status]));
 }
 
 export async function respondToApplication(applicationId, decision, promoter) {
@@ -134,6 +154,8 @@ export async function respondToApplication(applicationId, decision, promoter) {
     const bookingRef = doc(db, "bookings", `${eventId}_${application.promoterId}`);
     await runTransaction(db, async (tx) => {
       const eventSnap = await tx.get(eventRef);
+      const current = await tx.get(appRef);
+      if (current.data().status !== "pending") throw new Error("ALREADY_DECIDED");
       const event = eventSnap.data();
       if ((event.positionsFilled || 0) >= event.positionsRequired) throw new Error("FULL");
       const newFilled = (event.positionsFilled || 0) + 1;
@@ -161,7 +183,29 @@ export async function respondToApplication(applicationId, decision, promoter) {
     });
   } else {
     await updateDoc(appRef, { status: "rejected" });
+    await pushNotification(application.promoterId, {
+      type: "application_declined",
+      title: "Application not accepted",
+      message: `${application.eventName} went with other promoters this time.`,
+      link: "/promoter/jobs",
+    });
   }
+}
+
+/** Accepts pending applications oldest first until the event's spots run out. Returns how many were accepted. */
+export async function acceptApplicationsInOrder(applications, spotsLeft) {
+  let accepted = 0;
+  for (const a of applications.filter((x) => x.status === "pending")) {
+    if (accepted >= spotsLeft) break;
+    try {
+      await respondToApplication(a.id, "accepted");
+      accepted++;
+    } catch (err) {
+      if (err.message === "FULL") break;
+      if (err.message !== "ALREADY_DECIDED") throw err;
+    }
+  }
+  return accepted;
 }
 
 export async function listPromoterBookings(promoterId) {

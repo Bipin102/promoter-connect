@@ -28,7 +28,7 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { watchEvent, reconcileUrgentWindow, cancelEvent, reopenUrgentEvent, URGENT_WINDOW_MS } from "/js/events.js";
-  import { watchCompanyBookingsForEvent, listApplicationsForEvent, respondToApplication, completeEvent } from "/js/booking.js";
+  import { watchCompanyBookingsForEvent, watchApplicationsForEvent, respondToApplication, acceptApplicationsInOrder, completeEvent } from "/js/booking.js";
   import { listCheckInsForEvent } from "/js/checkin.js";
   import { hasRated, submitRating, categoriesFor } from "/js/ratings.js";
   import { eventDetailsHTML } from "/js/render.js";
@@ -69,12 +69,10 @@
       // A new booking may come with a check-in; keep both in step.
       listCheckInsForEvent(eventId).then((c) => { checkIns = c; render(); });
     });
-    refreshApplications();
-  }
-
-  async function refreshApplications() {
-    applications = await listApplicationsForEvent(eventId);
-    render();
+    watchApplicationsForEvent(eventId, (list) => {
+      applications = list;
+      render();
+    });
   }
 
   function render() {
@@ -84,8 +82,23 @@
     const active = bookings.filter((b) => b.status !== "cancelled");
     const isClosed = ["completed", "cancelled"].includes(e.status);
     const pending = applications.filter((a) => a.status === "pending");
+    const spotsLeft = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
+    const toAccept = Math.min(pending.length, spotsLeft);
 
     content.innerHTML = `
+      ${!isUrgent && !isClosed && pending.length ? `
+      <div class="action-banner mb-24" role="status">
+        <div>
+          <strong>${pending.length} ${pending.length === 1 ? "person has" : "people have"} applied</strong>
+          <p>${spotsLeft
+            ? `Spots only fill when you accept someone. ${spotsLeft === e.positionsRequired
+                ? (spotsLeft === 1 ? "Your 1 spot is" : `All ${spotsLeft} spots are`)
+                : `${spotsLeft} of ${e.positionsRequired} ${spotsLeft === 1 ? "spot is" : "spots are"}`} still open.`
+            : "All your spots are filled. You can decline the rest so they know."}</p>
+        </div>
+        ${toAccept ? `<button class="btn btn-primary" id="accept-all-btn">Accept ${toAccept === pending.length ? "all" : `first ${toAccept}`}</button>` : ""}
+      </div>` : ""}
+
       <div class="card mb-24">
         <div class="event-header">
           <div>
@@ -106,7 +119,7 @@
 
       ${!isUrgent && applications.length ? `
       <section class="section">
-        <div class="section-head"><h2>Applications</h2><span class="text-dim text-sm">${pending.length} waiting</span></div>
+        <div class="section-head"><h2>Applications</h2><span class="text-dim text-sm">${pending.length} waiting · oldest first</span></div>
         <div class="list">${applications.map(applicationRowHTML).join("")}</div>
       </section>` : ""}
 
@@ -209,7 +222,8 @@
     btn.disabled = true; btn.textContent = busyLabel;
     try { await fn(); }
     catch (err) {
-      toast(err.message === "FULL" ? "All spots are already filled." : "That didn't work. Please try again.", "error");
+      const messages = { FULL: "All spots are already filled.", ALREADY_DECIDED: "You've already responded to that application." };
+      toast(messages[err.message] || "That didn't work. Please try again.", "error");
       btn.disabled = false; btn.textContent = label;
     }
   }
@@ -244,12 +258,15 @@
     content.querySelectorAll("[data-accept]").forEach((btn) => btn.addEventListener("click", () => withButton(btn, "Accepting…", async () => {
       await respondToApplication(btn.dataset.accept, "accepted");
       toast("Accepted. They've been notified.", "success");
-      refreshApplications();
     })));
     content.querySelectorAll("[data-reject]").forEach((btn) => btn.addEventListener("click", () => withButton(btn, "Declining…", async () => {
       await respondToApplication(btn.dataset.reject, "rejected");
-      refreshApplications();
     })));
+    document.getElementById("accept-all-btn")?.addEventListener("click", (ev) => withButton(ev.target, "Accepting…", async () => {
+      const spotsLeft = Math.max(0, e.positionsRequired - (e.positionsFilled || 0));
+      const count = await acceptApplicationsInOrder(applications, spotsLeft);
+      toast(`Accepted ${count} ${count === 1 ? "promoter" : "promoters"}. They've been notified.`, "success");
+    }));
     content.querySelectorAll("[data-rate]").forEach((btn) => btn.addEventListener("click", () => openRating(btn.dataset.rate)));
   }
 

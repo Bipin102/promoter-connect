@@ -68,7 +68,7 @@
   import { mountLayout } from "/js/layout.js";
   import { getPromoter } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
-  import { bookPosition, applyToEvent, BOOKING_ERRORS } from "/js/booking.js";
+  import { bookPosition, applyToEvent, promoterApplicationStatuses, BOOKING_ERRORS } from "/js/booking.js";
   import { jobCardHTML, eventDetailsHTML, tickCountdowns } from "/js/render.js";
   import { toast, openModal, escapeHTML, skeletonCards, fmtDate, fmtTimeRange, fmtMoney } from "/js/ui.js";
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
@@ -109,6 +109,8 @@
         minPayment: $("f-payment").value,
       });
       list = await Promise.all(list.map(reconcileUrgentWindow));
+      const applied = promoter ? await promoterApplicationStatuses(promoter.id) : {};
+      list.forEach((e) => { e._application = applied[e.id]; });
     } catch {
       resultsEl.innerHTML = "";
       $("result-count").textContent = "";
@@ -165,7 +167,9 @@
       } else {
         await applyToEvent(event.id, promoter);
         toast(`Applied to ${event.eventName}. You'll get a notification when the company responds.`, "success", 6000);
-        btn.textContent = "Applied";
+        event._application = "pending";
+        btn.className = "btn btn-secondary";
+        btn.textContent = "Applied, waiting";
         return;
       }
     } catch (err) {
@@ -179,7 +183,7 @@
 
   function showDetails(event) {
     const isUrgent = event.hiringType === "urgent";
-    const closed = event.status !== "open" || event.positionsFilled >= event.positionsRequired;
+    const closed = event.status !== "open" || event.positionsFilled >= event.positionsRequired || event._application;
     const modal = openModal(`
       <p class="text-dim text-sm">${escapeHTML([event.brand, isUrgent ? "Urgent" : ""].filter(Boolean).join(" · "))}</p>
       <h2>${escapeHTML(event.eventName)}</h2>

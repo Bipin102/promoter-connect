@@ -29,6 +29,7 @@
     </div>
   </div>
 
+  <div id="waiting"></div>
   <div class="stat-grid" id="stats"></div>
 
   <section class="section" id="urgent-section" hidden>
@@ -55,6 +56,7 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
+  import { pendingApplicationCounts } from "/js/booking.js";
   import { mountInviteCard } from "/js/referrals.js";
   import { getCompany } from "/js/db.js";
   import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
@@ -63,7 +65,7 @@
   mountLayout({ role: "company" });
   const { user, profile } = await requireAuth("company");
   mountInviteCard(document.getElementById("invite-card"), { uid: user.uid, name: profile.displayName, code: profile.referralCode });
-  const [company, rawEvents] = await Promise.all([getCompany(user.uid), listCompanyEvents(user.uid)]);
+  const [company, rawEvents, pendingApps] = await Promise.all([getCompany(user.uid), listCompanyEvents(user.uid), pendingApplicationCounts(user.uid)]);
   const events = await Promise.all(rawEvents.map(reconcileUrgentWindow));
 
   if (company.companyName) document.getElementById("greeting").textContent = company.companyName;
@@ -102,7 +104,7 @@
   const eventRow = (e) => `
     <a href="/company/event?id=${encodeURIComponent(e.id)}" class="list-row">
       <div class="list-row-main">
-        <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}</div>
+        <div class="list-row-title">${escapeHTML(e.eventName)}${e.hiringType === "urgent" ? ` <span class="badge badge-urgent">Urgent</span>` : ""}${pendingApps[e.id] && ["open", "fulfilled"].includes(e.status) ? ` <span class="badge badge-accent">${pendingApps[e.id]} applied</span>` : ""}</div>
         <div class="list-row-sub">${fmtDate(e.date)} · ${escapeHTML(e.location)}</div>
       </div>
       <div class="list-row-side">
@@ -110,6 +112,20 @@
         <span>${e.positionsFilled || 0} of ${e.positionsRequired} filled</span>
       </div>
     </a>`;
+
+  const waitingEvents = events.filter((e) => pendingApps[e.id] && e.status === "open");
+  if (waitingEvents.length) {
+    const total = waitingEvents.reduce((sum, e) => sum + pendingApps[e.id], 0);
+    const first = waitingEvents[0];
+    document.getElementById("waiting").innerHTML = `
+      <div class="action-banner mb-24" role="status">
+        <div>
+          <strong>${total} ${total === 1 ? "application is" : "applications are"} waiting for you</strong>
+          <p>Spots only fill once you accept people${waitingEvents.length === 1 ? ` for ${escapeHTML(first.eventName)}` : ` across ${waitingEvents.length} events`}.</p>
+        </div>
+        <a class="btn btn-primary" href="/company/event?id=${encodeURIComponent(first.id)}">Review applications</a>
+      </div>`;
+  }
 
   const upcoming = events.filter((e) => ["open", "fulfilled"].includes(e.status));
   document.getElementById("upcoming").innerHTML = upcoming.length

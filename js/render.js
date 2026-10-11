@@ -12,6 +12,8 @@ export function eventMetaHTML(ev) {
     </div>`;
 }
 
+const APPLICATION_LABELS = { pending: "Applied, waiting", accepted: "Accepted", rejected: "Not selected" };
+
 export function jobCardHTML(ev, { showActions = true } = {}) {
   const isUrgent = ev.hiringType === "urgent";
   const remaining = Math.max(0, ev.positionsRequired - (ev.positionsFilled || 0));
@@ -37,7 +39,9 @@ export function jobCardHTML(ev, { showActions = true } = {}) {
     ${showActions ? `
     <div class="job-card-actions">
       <button class="btn btn-secondary" data-action="details">Details</button>
-      ${isUrgent
+      ${ev._application
+        ? `<button class="btn btn-secondary" disabled>${APPLICATION_LABELS[ev._application] || "Applied"}</button>`
+        : isUrgent
         ? `<button class="btn btn-urgent" data-action="book" ${closed ? "disabled" : ""}>${closed ? "Closed" : "Book a spot"}</button>`
         : `<button class="btn btn-primary" data-action="apply" ${closed ? "disabled" : ""}>${closed ? "Closed" : "Apply"}</button>`}
     </div>` : ""}

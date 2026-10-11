@@ -62,3 +62,12 @@
 .ac-table { margin-top: 12px; font-size: 13px; }
 .ac-table summary { cursor: pointer; color: var(--text-dim); }
 .ac-table .admin-table { margin-top: 8px; }
+
+.action-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 16px 18px; border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); background: var(--accent-soft);
+}
+.action-banner strong { font-size: 15px; }
+.action-banner p { font-size: 14px; color: var(--text-dim); margin-top: 2px; }
+@media (max-width: 560px) { .action-banner .btn { width: 100%; } }
