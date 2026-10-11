@@ -118,6 +118,25 @@ service cloud.firestore {
       );
     }
 
+    // Invite codes: referralCodes/{CODE} -> { uid }. Anyone can look a code up
+    // (the sign-up page checks it before an account exists); codes are never edited.
+    match /referralCodes/{code} {
+      allow get: if true;
+      allow create: if isSignedIn() && code.matches('^[A-Z0-9]{4,12}$') &&
+        request.resource.data.keys().hasOnly(['uid', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    // One doc per referred account, keyed by its uid, written during sign-up.
+    match /referrals/{uid} {
+      allow read: if isSignedIn() &&
+        (resource.data.referrerId == request.auth.uid || uid == request.auth.uid || isAdmin());
+      allow create: if isOwner(uid) &&
+        request.resource.data.referrerId != request.auth.uid &&
+        get(/databases/$(database)/documents/referralCodes/$(request.resource.data.code)).data.uid == request.resource.data.referrerId &&
+        request.time < get(/databases/$(database)/documents/users/$(uid)).data.createdAt + duration.value(1, 'h');
+    }
+
     match /notifications/{id} {
       allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
       // Written by the client of whoever triggered it (no backend). Contents are

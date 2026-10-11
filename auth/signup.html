@@ -21,6 +21,7 @@
     <p class="auth-sub">Takes about a minute. You can fill in your profile after.</p>
 
     <div class="form-error" id="err" role="alert"></div>
+    <p class="invite-note hidden" id="invite-note"></p>
 
     <form id="signup-form" novalidate>
       <fieldset class="field" style="border:0;padding:0;margin:0 0 18px">
@@ -67,6 +68,7 @@
 
 <script type="module">
   import { signup } from "/js/auth.js";
+  import { lookupCode, normalizeCode, rememberPendingCode, pendingCode } from "/js/referrals.js";
 
   const cards = document.querySelectorAll(".radio-card");
   function selectRole(card) {
@@ -78,6 +80,24 @@
   const preselect = new URLSearchParams(location.search).get("role");
   const preselected = document.querySelector(`.radio-card[data-role="${preselect === "company" ? "company" : preselect === "promoter" ? "promoter" : ""}"]`);
   if (preselected) selectRole(preselected);
+
+  // Invite links land here as /auth/signup?ref=CODE (via /r/CODE).
+  const refParam = new URLSearchParams(location.search).get("ref");
+  if (refParam) rememberPendingCode(refParam);
+  let referral = null;
+  const inviteCode = normalizeCode(refParam || pendingCode());
+  if (inviteCode) {
+    lookupCode(inviteCode).then((referrerId) => {
+      const note = document.getElementById("invite-note");
+      if (referrerId) {
+        referral = { code: inviteCode, referrerId };
+        note.textContent = `You were invited with code ${inviteCode}.`;
+      } else {
+        note.textContent = `Invite code ${inviteCode} wasn't found. You can still sign up.`;
+      }
+      note.classList.remove("hidden");
+    }).catch(() => {});
+  }
 
   const errBox = document.getElementById("err");
   const showError = (msg) => { errBox.textContent = msg; errBox.classList.add("show"); };
@@ -100,7 +120,7 @@
     const btn = document.getElementById("submit-btn");
     btn.disabled = true; btn.textContent = "Creating account…";
     try {
-      await signup({ email, password, role, name });
+      await signup({ email, password, role, name, referral });
       location.href = role === "company" ? "/company/profile?onboarding=1" : "/promoter/profile?onboarding=1";
     } catch (err) {
       showError(authErrorMessage(err));

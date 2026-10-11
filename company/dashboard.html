@@ -43,6 +43,11 @@
     </div>
     <div id="upcoming"><div class="loading-state"><div class="spinner"></div></div></div>
   </section>
+
+  <section class="section">
+    <div class="section-head"><h2>Invite friends</h2></div>
+    <div class="card" id="invite-card"></div>
+  </section>
 </main>
 
 <div id="pc-footer"></div>
@@ -50,12 +55,14 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
+  import { mountInviteCard } from "/js/referrals.js";
   import { getCompany } from "/js/db.js";
   import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
   import { fmtDate, fmtCountdown, escapeHTML, statusPill } from "/js/ui.js";
 
   mountLayout({ role: "company" });
-  const { user } = await requireAuth("company");
+  const { user, profile } = await requireAuth("company");
+  mountInviteCard(document.getElementById("invite-card"), { uid: user.uid, name: profile.displayName, code: profile.referralCode });
   const [company, rawEvents] = await Promise.all([getCompany(user.uid), listCompanyEvents(user.uid)]);
   const events = await Promise.all(rawEvents.map(reconcileUrgentWindow));
 

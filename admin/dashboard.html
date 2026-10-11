@@ -90,8 +90,13 @@
         role: u.role || "unknown",
         createdAt: toDate(u.createdAt),
         lastActiveAt: toDate(u.lastActiveAt),
+        referralCode: u.referralCode || "",
+        referredBy: u.referredBy || null,
       };
     }).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const invited = {};
+    users.forEach((u) => { if (u.referredBy) invited[u.referredBy] = (invited[u.referredBy] || 0) + 1; });
+    users.forEach((u) => { u.invited = invited[u.uid] || 0; });
     document.getElementById("as-of").textContent = `Live from Firestore · updated ${fmtDateTime(new Date())}`;
     render();
   }
@@ -121,7 +126,7 @@
 
     root.innerHTML = `
       <div class="stat-grid">
-        ${tile(s.total, "Registered users", `${s.promoters} promoters · ${s.companies} companies`)}
+        ${tile(s.total, "Registered users", `${s.promoters} promoters · ${s.companies} companies · ${users.filter((u) => u.referredBy).length} via invites`)}
         ${tile(s.active, "Active users", `seen in the last ${ACTIVE_WINDOW_DAYS} days`)}
         ${tile(s.today, "New today")}
         ${tile(`${s.week} <span class="stat-split">/ ${s.month}</span>`, "New this week / month", "week = last 7 days")}
@@ -146,7 +151,7 @@
           </div>
         </div>
         <div class="card admin-table-card"><div class="admin-table-wrap"><table class="admin-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th><th>Last active</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th><th>Last active</th><th>Invite code</th><th>Friends invited</th></tr></thead>
           <tbody id="user-rows"></tbody>
         </table></div></div>
       </section>`;
@@ -179,8 +184,10 @@
         <td><span class="badge ${u.role === "company" ? "" : "badge-accent"}">${escapeHTML(u.role)}</span></td>
         <td title="${u.createdAt ? fmtDateTime(u.createdAt) : ""}">${u.createdAt ? fmtDay(u.createdAt) : "—"}</td>
         <td title="${u.lastActiveAt ? fmtDateTime(u.lastActiveAt) : "Not seen since activity tracking started"}">${relTime(u.lastActiveAt)}</td>
+        <td>${u.referralCode ? `<code>${escapeHTML(u.referralCode)}</code>` : "—"}</td>
+        <td>${u.invited || "—"}</td>
       </tr>`;
-    }).join("") : `<tr><td colspan="5" class="text-center text-dim" style="padding:32px;">No users match.</td></tr>`;
+    }).join("") : `<tr><td colspan="7" class="text-center text-dim" style="padding:32px;">No users match.</td></tr>`;
   }
 
   /** Daily new-registration bars for the last CHART_DAYS days, with a hover tooltip per bar. */
@@ -258,8 +265,8 @@
 
   function exportCSV() {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["Name", "Email", "Role", "Registered", "Last active", "UID"]].concat(
-      filteredUsers().map((u) => [u.name, u.email, u.role, u.createdAt?.toISOString() || "", u.lastActiveAt?.toISOString() || "", u.uid]));
+    const rows = [["Name", "Email", "Role", "Registered", "Last active", "Invite code", "Friends invited", "UID"]].concat(
+      filteredUsers().map((u) => [u.name, u.email, u.role, u.createdAt?.toISOString() || "", u.lastActiveAt?.toISOString() || "", u.referralCode, u.invited, u.uid]));
     const blob = new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `promoter-connect-users-${new Date().toISOString().slice(0, 10)}.csv` });
     a.click();

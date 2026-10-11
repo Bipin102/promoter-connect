@@ -55,6 +55,11 @@
     </div>
     <div class="card" id="ratings-preview"></div>
   </section>
+
+  <section class="section">
+    <div class="section-head"><h2>Invite friends</h2></div>
+    <div class="card" id="invite-card"></div>
+  </section>
 </main>
 
 <div id="pc-footer"></div>
@@ -62,6 +67,7 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
+  import { mountInviteCard } from "/js/referrals.js";
   import { getPromoter } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
   import { listPromoterBookings } from "/js/booking.js";
@@ -71,7 +77,8 @@
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
   mountLayout({ role: "promoter" });
-  const { user } = await requireAuth("promoter");
+  const { user, profile } = await requireAuth("promoter");
+  mountInviteCard(document.getElementById("invite-card"), { uid: user.uid, name: profile.displayName, code: profile.referralCode });
 
   const [promoter, openEvents, bookings, ratings] = await Promise.all([
     getPromoter(user.uid), listOpenEvents({ hiringType: "urgent" }), listPromoterBookings(user.uid), listRatingsFor(user.uid),

@@ -250,3 +250,21 @@ a.list-row:hover { background: var(--surface-2); }
 }
 .stars-input button.active { color: var(--warning); }
 .stars-input button:hover { color: var(--warning); }
+
+/* ============ INVITES ============ */
+.invite-note {
+  font-size: 13px; padding: 10px 12px; margin-bottom: 16px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); color: var(--accent-text);
+}
+.invite-create { display: flex; gap: 8px; margin-top: 14px; max-width: 420px; }
+.invite-create .input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+.invite-stats { display: flex; gap: 40px; flex-wrap: wrap; margin-bottom: 16px; }
+.invite-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 22px; font-weight: 600; letter-spacing: 0.08em; margin-top: 2px; }
+.invite-count { font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.invite-link { display: flex; gap: 8px; }
+.invite-link .input { flex: 1; min-width: 0; color: var(--text-dim); font-size: 13px; }
+@media (max-width: 480px) {
+  .invite-link { flex-wrap: wrap; }
+  .invite-link .input { flex-basis: 100%; }
+  .invite-link .btn { flex: 1; }
+}

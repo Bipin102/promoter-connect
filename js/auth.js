@@ -4,6 +4,7 @@ import {
   sendPasswordResetEmail, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { recordReferral } from "./referrals.js";
 
 /**
  * Creates the Firestore side of an account (users/{uid} + promoters/{uid} or
@@ -11,12 +12,13 @@ import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebase
  * an account whose Auth user exists but whose profile docs never got written
  * (e.g. a signup that was interrupted mid-way by a transient error).
  */
-export async function createUserDocs(user, { role, name, email }) {
+export async function createUserDocs(user, { role, name, email, referredBy = null }) {
   await setDoc(doc(db, "users", user.uid), {
     uid: user.uid,
     email,
     role, // 'promoter' | 'company'
     displayName: name,
+    referredBy,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -49,10 +51,12 @@ export async function createUserDocs(user, { role, name, email }) {
   }
 }
 
-export async function signup({ email, password, role, name }) {
+/** referral is { code, referrerId } from an invite link, or null. */
+export async function signup({ email, password, role, name, referral = null }) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(cred.user, { displayName: name });
-  await createUserDocs(cred.user, { role, name, email });
+  await createUserDocs(cred.user, { role, name, email, referredBy: referral?.referrerId || null });
+  if (referral) await recordReferral(cred.user.uid, referral, role);
   return cred.user;
 }
 
