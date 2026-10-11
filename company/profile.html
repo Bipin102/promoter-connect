@@ -39,8 +39,16 @@
       </div>
       <div class="field"><label for="companyName">Company name</label><input type="text" id="companyName" autocomplete="organization" required /></div>
       <div class="field-row">
-        <div class="field"><label for="industry">What you do</label><input type="text" id="industry" placeholder="e.g. Activation agency" /></div>
-        <div class="field"><label for="location">City</label><input type="text" id="location" placeholder="e.g. Mumbai" required /></div>
+        <div class="field">
+          <label for="industry">What you do</label>
+          <select id="industry"></select>
+          <input type="text" id="industry-other" class="input hidden mt-8" placeholder="Describe your business" aria-label="What you do" />
+        </div>
+        <div class="field">
+          <label for="location">City</label>
+          <select id="location" required></select>
+          <input type="text" id="location-other" class="input hidden mt-8" placeholder="Type your city" aria-label="Your city" />
+        </div>
       </div>
       <div class="field"><label for="contact">Contact</label><input type="text" id="contact" placeholder="Phone or email" /><p class="field-hint">Shown on your public profile.</p></div>
       <div class="field"><label for="description">About</label><textarea id="description" rows="4" placeholder="The kind of events you run and the brands you work with"></textarea></div>
@@ -61,7 +69,8 @@
   import { mountLayout } from "/js/layout.js";
   import { getCompany, updateCompany } from "/js/db.js";
   import { uploadImage } from "/js/storage.js";
-  import { toast, stars, badgeList, escapeHTML, avatarHTML } from "/js/ui.js";
+  import { toast, stars, badgeList, escapeHTML, avatarHTML, selectWithOther } from "/js/ui.js";
+  import { CITIES, INDUSTRIES } from "/js/options.js";
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
@@ -69,6 +78,7 @@
   $("public-link").href = `/shared/company-profile?id=${encodeURIComponent(user.uid)}`;
 
   let company = await getCompany(user.uid);
+  let readIndustry, readCity;
   fillForm(company);
   renderPreview(company);
 
@@ -78,8 +88,8 @@
 
   function fillForm(c) {
     $("companyName").value = c.companyName || "";
-    $("industry").value = c.industry || "";
-    $("location").value = c.location || "";
+    readIndustry = selectWithOther($("industry"), $("industry-other"), INDUSTRIES.filter((i) => i !== "Other"), c.industry || "");
+    readCity = selectWithOther($("location"), $("location-other"), CITIES, c.location || "");
     $("contact").value = c.contact || "";
     $("description").value = c.description || "";
     $("logo-preview").innerHTML = avatarHTML(c.logoURL, c.companyName, "lg");
@@ -101,7 +111,7 @@
 
   $("profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!$("companyName").value.trim() || !$("location").value.trim()) return toast("Company name and city are required.", "error");
+    if (!$("companyName").value.trim() || !readCity()) return toast("Company name and city are required.", "error");
     const btn = $("save-btn");
     btn.disabled = true; btn.textContent = "Saving…";
     try {
@@ -109,8 +119,8 @@
       const logoURL = file ? await uploadImage(`companies/${user.uid}/logo-${Date.now()}.jpg`, file) : company.logoURL || "";
       const data = {
         companyName: $("companyName").value.trim(),
-        industry: $("industry").value.trim(),
-        location: $("location").value.trim(),
+        industry: readIndustry(),
+        location: readCity(),
         contact: $("contact").value.trim(),
         description: $("description").value.trim(),
         logoURL,

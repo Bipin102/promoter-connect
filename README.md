@@ -27,6 +27,15 @@ Every page is a standalone `.html` file that imports shared code from `/js`.
 5. Firestore → Rules → paste [`firestore.rules`](firestore.rules) → Publish.
    **Re-publish whenever that file changes**; it isn't deployed with the site.
 
+### Google sign-in
+
+1. Authentication → Sign-in method → Add new provider → Google → Enable → Save.
+2. Authentication → Settings → Authorized domains → add `promoterconnect.site`
+   (and `www.promoterconnect.site` if you use it).
+
+Until both are done, the "Continue with Google" button shows a message asking
+people to use email instead.
+
 ### Supabase (images)
 
 Firebase Storage now needs a billing account just to be enabled, so images live

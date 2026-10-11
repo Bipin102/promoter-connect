@@ -40,7 +40,11 @@
 
       <div class="field-row">
         <div class="field"><label for="fullName">Full name</label><input type="text" id="fullName" autocomplete="name" required /></div>
-        <div class="field"><label for="city">City</label><input type="text" id="city" autocomplete="address-level2" placeholder="e.g. Mumbai" required /></div>
+        <div class="field">
+          <label for="city">City</label>
+          <select id="city" required></select>
+          <input type="text" id="city-other" class="input hidden mt-8" placeholder="Type your city" aria-label="Your city" />
+        </div>
       </div>
       <div class="field-row">
         <div class="field"><label for="age">Age <span class="optional">(optional)</span></label><input type="number" id="age" min="16" max="80" inputmode="numeric" /></div>
@@ -51,13 +55,13 @@
       </div>
       <div class="field-row">
         <div class="field"><label for="height">Height <span class="optional">(optional)</span></label><input type="text" id="height" placeholder="e.g. 5'6&quot;" /></div>
-        <div class="field"><label for="yearsExperience">Years of experience</label><input type="number" id="yearsExperience" min="0" inputmode="numeric" /></div>
+        <div class="field"><label for="yearsExperience">Experience</label><select id="yearsExperience"></select></div>
       </div>
 
-      <div class="field"><label for="skills">Skills</label><input type="text" id="skills" placeholder="Hosting, sampling, emceeing" /><p class="field-hint">Separate with commas</p></div>
-      <div class="field"><label for="languages">Languages</label><input type="text" id="languages" placeholder="English, Hindi, Marathi" /></div>
-      <div class="field"><label for="brands">Brands you've worked with</label><input type="text" id="brands" placeholder="Nike, Cadbury" /></div>
-      <div class="field"><label for="categories">Event types</label><input type="text" id="categories" placeholder="Brand activation, exhibition, retail" /></div>
+      <fieldset class="field fieldset-plain"><legend class="field-label">Skills <span class="optional">(tap all that apply)</span></legend><div id="skills"></div></fieldset>
+      <fieldset class="field fieldset-plain"><legend class="field-label">Languages you speak</legend><div id="languages"></div></fieldset>
+      <fieldset class="field fieldset-plain"><legend class="field-label">Events you've worked</legend><div id="categories"></div></fieldset>
+      <div class="field"><label for="brands">Brands you've worked with <span class="optional">(optional)</span></label><input type="text" id="brands" placeholder="Nike, Cadbury" /><p class="field-hint">Separate with commas</p></div>
       <div class="field">
         <label for="availability">Availability</label>
         <select id="availability"><option value="available">Available for work</option><option value="busy">Not taking work right now</option></select>
@@ -67,6 +71,28 @@
     </form>
 
     <div class="stack">
+      <div class="card" id="payout-card">
+        <h2 class="card-title">How you get paid</h2>
+        <p class="text-dim text-sm mb-16">Only companies that book you can see this.</p>
+        <form id="payout-form" novalidate>
+          <div class="radio-card-group payout-options">
+            <label class="radio-card" data-method="upi"><input type="radio" name="payout" value="upi" /><h4>UPI</h4></label>
+            <label class="radio-card" data-method="bank"><input type="radio" name="payout" value="bank" /><h4>Bank</h4></label>
+            <label class="radio-card" data-method="cash"><input type="radio" name="payout" value="cash" /><h4>Cash</h4></label>
+          </div>
+          <div class="payout-fields hidden" data-for="upi">
+            <div class="field"><label for="upiId">UPI ID</label><input type="text" id="upiId" placeholder="name@okaxis" autocapitalize="off" spellcheck="false" /></div>
+          </div>
+          <div class="payout-fields hidden" data-for="bank">
+            <div class="field"><label for="accountName">Account holder name</label><input type="text" id="accountName" /></div>
+            <div class="field"><label for="accountNumber">Account number</label><input type="text" id="accountNumber" inputmode="numeric" autocomplete="off" /></div>
+            <div class="field"><label for="ifsc">IFSC code</label><input type="text" id="ifsc" placeholder="HDFC0001234" autocapitalize="characters" spellcheck="false" /></div>
+          </div>
+          <p class="text-dim text-sm hidden payout-fields" data-for="cash">The company pays you in cash at the event.</p>
+          <button type="submit" class="btn btn-primary btn-block mt-16" id="payout-save">Save payment method</button>
+        </form>
+      </div>
+
       <div class="card">
         <h2 class="card-title">How companies see you</h2>
         <div id="rep-preview"></div>
@@ -99,7 +125,9 @@
   import { mountLayout } from "/js/layout.js";
   import { getPromoter, updatePromoter, addPortfolioImage, listPortfolio, removePortfolioImage } from "/js/db.js";
   import { uploadImage } from "/js/storage.js";
-  import { toast, stars, badgeList, escapeHTML, avatarHTML, safeUrl, confirmDialog } from "/js/ui.js";
+  import { toast, stars, badgeList, escapeHTML, avatarHTML, safeUrl, confirmDialog, chipPicker, selectWithOther } from "/js/ui.js";
+  import { CITIES, SKILLS, LANGUAGES, EVENT_TYPES, EXPERIENCE } from "/js/options.js";
+  import { getPayout, savePayout, validatePayout } from "/js/payouts.js";
   import { getCurrentLocation } from "/js/geo.js";
   import { icon } from "/js/icons.js";
 
@@ -109,7 +137,9 @@
   $("public-link").href = `/shared/promoter-profile?id=${encodeURIComponent(user.uid)}`;
 
   let promoter = await getPromoter(user.uid);
+  let readSkills, readLanguages, readCategories, readCity;
   fillForm(promoter);
+  initPayout();
   renderPreview(promoter);
   renderLocationStatus(promoter);
   loadGallery();
@@ -147,15 +177,17 @@
   function fillForm(p) {
     const set = (id, value) => { $(id).value = value ?? ""; };
     set("fullName", p.fullName);
-    set("city", p.city);
+    readCity = selectWithOther($("city"), $("city-other"), CITIES, p.city || "");
     set("age", p.age);
     set("gender", p.gender);
     set("height", p.height);
-    set("yearsExperience", p.yearsExperience || 0);
-    set("skills", (p.skills || []).join(", "));
-    set("languages", (p.languages || []).join(", "));
+    const years = p.yearsExperience || 0;
+    $("yearsExperience").innerHTML = EXPERIENCE.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+    $("yearsExperience").value = String([...EXPERIENCE].reverse().find(([value]) => years >= value)[0]);
+    readSkills = chipPicker($("skills"), SKILLS, p.skills || [], { label: "Add another skill" });
+    readLanguages = chipPicker($("languages"), LANGUAGES, p.languages || [], { label: "Add another language" });
+    readCategories = chipPicker($("categories"), EVENT_TYPES, p.categories || [], { label: "Add another event type" });
     set("brands", (p.brands || []).join(", "));
-    set("categories", (p.categories || []).join(", "));
     set("availability", p.availability || "available");
     $("photo-preview").innerHTML = avatarHTML(p.photoURL, p.fullName, "lg");
   }
@@ -174,11 +206,58 @@
       <div class="profile-badges">${badgeList(p, "promoter")}</div>`;
   }
 
+  async function initPayout() {
+    const form = $("payout-form");
+    const cards = form.querySelectorAll(".radio-card");
+    const choose = (method) => {
+      cards.forEach((c) => {
+        const on = c.dataset.method === method;
+        c.classList.toggle("selected", on);
+        c.querySelector("input").checked = on;
+      });
+      form.querySelectorAll(".payout-fields").forEach((f) => f.classList.toggle("hidden", f.dataset.for !== method));
+    };
+    cards.forEach((c) => c.querySelector("input").addEventListener("change", () => choose(c.dataset.method)));
+    $("ifsc").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase(); });
+
+    const saved = await getPayout(user.uid).catch(() => null);
+    if (saved) {
+      choose(saved.method);
+      $("upiId").value = saved.upiId || "";
+      $("accountName").value = saved.accountName || "";
+      $("accountNumber").value = saved.accountNumber || "";
+      $("ifsc").value = saved.ifsc || "";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payout = {
+        method: form.querySelector('input[name="payout"]:checked')?.value,
+        upiId: $("upiId").value.trim(),
+        accountName: $("accountName").value.trim(),
+        accountNumber: $("accountNumber").value.replace(/\s/g, ""),
+        ifsc: $("ifsc").value.trim(),
+      };
+      const problem = validatePayout(payout);
+      if (problem) return toast(problem, "error");
+      const btn = $("payout-save");
+      btn.disabled = true; btn.textContent = "Saving…";
+      try {
+        await savePayout(user.uid, payout);
+        toast("Payment method saved.", "success");
+      } catch {
+        toast("Couldn't save your payment method. Please try again.", "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "Save payment method";
+      }
+    });
+  }
+
   const splitList = (str) => str.split(",").map((s) => s.trim()).filter(Boolean);
 
   $("profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!$("fullName").value.trim() || !$("city").value.trim()) {
+    if (!$("fullName").value.trim() || !readCity()) {
       return toast("Name and city are required.", "error");
     }
     const btn = $("save-btn");
@@ -188,15 +267,15 @@
       const photoURL = file ? await uploadImage(`promoters/${user.uid}/profile-${Date.now()}.jpg`, file) : promoter.photoURL || "";
       const data = {
         fullName: $("fullName").value.trim(),
-        city: $("city").value.trim(),
+        city: readCity(),
         age: $("age").value ? Number($("age").value) : null,
         gender: $("gender").value,
         height: $("height").value.trim(),
         yearsExperience: Number($("yearsExperience").value) || 0,
-        skills: splitList($("skills").value),
-        languages: splitList($("languages").value),
+        skills: readSkills(),
+        languages: readLanguages(),
         brands: splitList($("brands").value),
-        categories: splitList($("categories").value),
+        categories: readCategories(),
         availability: $("availability").value,
         photoURL,
       };

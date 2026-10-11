@@ -4,6 +4,7 @@ import {
   updateDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
+import { grantPayoutAccess } from "./payouts.js";
 
 function generateBookingCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -75,6 +76,7 @@ export async function bookPosition(eventId, promoter) {
     return { bookingCode, newFilled, positionsRequired: event.positionsRequired, isNowFull, event };
   });
 
+  await grantPayoutAccess(bookingId, promoter.uid, result.event.companyId).catch(() => {});
   await pushNotification(result.event.companyId, {
     type: "booking_confirmed",
     title: "New booking",
@@ -175,6 +177,7 @@ export async function respondToApplication(applicationId, decision, promoter) {
         bookingCode: generateBookingCode(), bookedAt: serverTimestamp(),
       });
     });
+    await grantPayoutAccess(bookingRef.id, application.promoterId, application.companyId).catch(() => {});
     await pushNotification(application.promoterId, {
       type: "booking_confirmed",
       title: "You're booked",

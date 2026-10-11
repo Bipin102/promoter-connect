@@ -1,7 +1,7 @@
 import { auth, db, serverTimestamp, onAuthStateChanged, signOut } from "./firebase-init.js";
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  sendPasswordResetEmail, updateProfile
+  sendPasswordResetEmail, updateProfile, GoogleAuthProvider, signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { recordReferral } from "./referrals.js";
@@ -58,6 +58,42 @@ export async function signup({ email, password, role, name, referral = null }) {
   await createUserDocs(cred.user, { role, name, email, referredBy: referral?.referrerId || null });
   if (referral) await recordReferral(cred.user.uid, referral, role);
   return cred.user;
+}
+
+/**
+ * One-tap Google sign-in. For a first-time user with a role chosen (from the
+ * sign-up page), the account is created straight away.
+ * Resolves with { user, profile, isNew }; profile is null if no role was given yet.
+ */
+export async function continueWithGoogle({ role = null, referral = null } = {}) {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const { user } = await signInWithPopup(auth, provider);
+  const existing = await getUserDoc(user.uid);
+  if (existing || !role) return { user, profile: existing, isNew: false };
+
+  const name = user.displayName || user.email.split("@")[0];
+  await createUserDocs(user, { role, name, email: user.email, referredBy: referral?.referrerId || null });
+  if (referral) await recordReferral(user.uid, referral, role);
+  return { user, profile: { role }, isNew: true };
+}
+
+/** Plain-language messages for Firebase auth errors shown on the login and sign-up pages. */
+export function authErrorMessage(err) {
+  const code = err?.code || "";
+  if (code.includes("email-already-in-use")) return "There's already an account with this email. Try logging in, or use Continue with Google.";
+  if (code.includes("weak-password")) return "Use a password with at least 6 characters.";
+  if (code.includes("invalid-email")) return "That email address doesn't look right.";
+  if (code.includes("user-not-found") || code.includes("invalid-credential") || code.includes("wrong-password")) return "That email and password don't match an account.";
+  if (code.includes("too-many-requests")) return "Too many attempts. Wait a few minutes and try again.";
+  if (code.includes("network-request-failed")) return "You seem to be offline. Check your connection and try again.";
+  if (code.includes("popup-closed-by-user") || code.includes("cancelled-popup-request")) return "";
+  if (code.includes("popup-blocked")) return "Your browser blocked the Google window. Allow pop-ups for this site and try again.";
+  if (code.includes("operation-not-allowed") || code.includes("unauthorized-domain") || code.includes("configuration-not-found")) {
+    return "Google sign-in isn't available right now. Please use your email instead.";
+  }
+  if (code.includes("account-exists-with-different-credential")) return "This email already has an account. Log in with your email and password.";
+  return "Something went wrong. Please try again.";
 }
 
 export async function login(email, password) {

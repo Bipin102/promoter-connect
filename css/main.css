@@ -272,6 +272,8 @@ a:focus-visible, button:focus-visible { border-radius: var(--radius-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 body.has-bottom-nav { padding-bottom: 72px; }
+/* Keep focused or scrolled-to elements clear of the fixed tab bar. */
+html:has(body.has-bottom-nav) { scroll-padding-bottom: 88px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
@@ -336,4 +338,14 @@ body.has-bottom-nav { padding-bottom: 72px; }
   .lp-search-icon { display: none; }
   .lp-search .btn { width: 100%; }
   .lp-feature-grid .btn { width: 100%; }
+}
+
+.google-btn { gap: 10px; font-weight: 500; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; font-size: 12px; color: var(--text-faint); }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.password-wrap { position: relative; }
+.password-wrap input { padding-right: 64px; }
+.password-toggle {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%); height: 32px; padding: 0 10px;
+  background: none; border: none; font-size: 13px; font-weight: 500; color: var(--accent-text); border-radius: var(--radius-sm);
 }

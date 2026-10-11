@@ -207,3 +207,48 @@ export function skeletonCards(count, lines = 4) {
       ${widths.slice(0, lines).map((w) => `<div class="skeleton-line" style="width:${w}"></div>`).join("")}
     </div>`).join("");
 }
+
+/**
+ * Tap-to-select chips backed by real checkboxes. Values not in the preset list
+ * (from older profiles or the "add your own" box) are kept as extra chips.
+ * Returns a function that reads the current selection.
+ */
+export function chipPicker(host, options, selected = [], { allowCustom = true, label = "Add another" } = {}) {
+  const all = [...options, ...selected.filter((v) => !options.includes(v))];
+  const name = `chips-${Math.random().toString(36).slice(2, 8)}`;
+  const chipHTML = (value, checked) => `
+    <label class="chip"><input type="checkbox" name="${name}" value="${escapeHTML(value)}" ${checked ? "checked" : ""} /><span>${escapeHTML(value)}</span></label>`;
+  host.classList.add("chip-picker");
+  host.innerHTML = `<div class="chip-list">${all.map((v) => chipHTML(v, selected.includes(v))).join("")}</div>
+    ${allowCustom ? `<div class="chip-add"><input class="input" type="text" placeholder="${escapeHTML(label)}" aria-label="${escapeHTML(label)}" /><button type="button" class="btn btn-secondary btn-sm">Add</button></div>` : ""}`;
+
+  if (allowCustom) {
+    const input = host.querySelector(".chip-add input");
+    const add = () => {
+      const value = input.value.trim().replace(/\s+/g, " ");
+      if (!value) return;
+      const existing = [...host.querySelectorAll("input[type=checkbox]")].find((c) => c.value.toLowerCase() === value.toLowerCase());
+      if (existing) existing.checked = true;
+      else host.querySelector(".chip-list").insertAdjacentHTML("beforeend", chipHTML(value, true));
+      input.value = "";
+    };
+    host.querySelector(".chip-add button").addEventListener("click", add);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+  }
+  return () => [...host.querySelectorAll("input[type=checkbox]:checked")].map((c) => c.value);
+}
+
+/** Fills a <select> with presets plus "Other", and shows otherInput when Other is picked. */
+export function selectWithOther(select, otherInput, options, current = "") {
+  const known = options.includes(current);
+  select.innerHTML = `<option value="">Choose…</option>${options.map((o) => `<option ${o === current ? "selected" : ""}>${escapeHTML(o)}</option>`).join("")}<option value="__other" ${current && !known ? "selected" : ""}>Other</option>`;
+  otherInput.value = current && !known ? current : "";
+  const sync = () => {
+    const isOther = select.value === "__other";
+    otherInput.classList.toggle("hidden", !isOther);
+    if (isOther && document.activeElement === select) otherInput.focus();
+  };
+  select.addEventListener("change", sync);
+  sync();
+  return () => (select.value === "__other" ? otherInput.value.trim() : select.value);
+}

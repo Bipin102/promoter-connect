@@ -71,3 +71,10 @@
 .action-banner strong { font-size: 15px; }
 .action-banner p { font-size: 14px; color: var(--text-dim); margin-top: 2px; }
 @media (max-width: 560px) { .action-banner .btn { width: 100%; } }
+.payout-line { white-space: normal; }
+.payout-line code { font-size: 12px; }
+.fieldset-plain { border: 0; padding: 0; margin-left: 0; margin-right: 0; min-width: 0; }
+.payout-options { grid-template-columns: repeat(3, 1fr); }
+.payout-options .radio-card { text-align: center; padding: 12px 8px; min-width: 0; }
+@media (max-width: 560px) { .payout-options { grid-template-columns: repeat(3, 1fr); } }
+.payout-fields { margin-top: 16px; }

@@ -18,47 +18,51 @@
   <div class="auth-card">
     <a href="/" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
     <h1 class="auth-title">Create your account</h1>
-    <p class="auth-sub">Takes about a minute. You can fill in your profile after.</p>
+    <p class="auth-sub">Free, and it takes a few seconds.</p>
 
     <div class="form-error" id="err" role="alert"></div>
     <p class="invite-note hidden" id="invite-note"></p>
 
+    <fieldset class="field" style="border:0;padding:0;margin:0 0 20px">
+      <legend class="field-label">I'm a</legend>
+      <div class="radio-card-group">
+        <label class="radio-card" data-role="promoter">
+          <input type="radio" name="role" value="promoter" />
+          <h4>Promoter</h4>
+          <p>Looking for event work</p>
+        </label>
+        <label class="radio-card" data-role="company">
+          <input type="radio" name="role" value="company" />
+          <h4>Company</h4>
+          <p>Hiring for events</p>
+        </label>
+      </div>
+    </fieldset>
+
+    <button type="button" class="btn btn-secondary btn-block btn-lg google-btn" id="google-btn">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider"><span>or sign up with email</span></div>
+
     <form id="signup-form" novalidate>
-      <fieldset class="field" style="border:0;padding:0;margin:0 0 18px">
-        <legend class="field-label">I'm signing up as</legend>
-        <div class="radio-card-group">
-          <label class="radio-card" data-role="promoter">
-            <input type="radio" name="role" value="promoter" required />
-            <h4>Promoter</h4>
-            <p>I want to find gigs and get booked.</p>
-          </label>
-          <label class="radio-card" data-role="company">
-            <input type="radio" name="role" value="company" />
-            <h4>Company</h4>
-            <p>I hire promoters for events.</p>
-          </label>
-        </div>
-      </fieldset>
       <div class="field">
-        <label for="name" id="name-label">Full name</label>
+        <label for="name" id="name-label">Your name</label>
         <input type="text" id="name" autocomplete="name" required />
       </div>
       <div class="field">
         <label for="email">Email</label>
-        <input type="email" id="email" autocomplete="email" required />
+        <input type="email" id="email" autocomplete="email" inputmode="email" required />
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="password">Password</label>
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="password-wrap">
           <input type="password" id="password" autocomplete="new-password" required minlength="6" />
-          <p class="field-hint">At least 6 characters</p>
+          <button type="button" class="password-toggle" id="pw-toggle" aria-label="Show password">Show</button>
         </div>
-        <div class="field">
-          <label for="confirm">Confirm password</label>
-          <input type="password" id="confirm" autocomplete="new-password" required minlength="6" />
-        </div>
+        <p class="field-hint">At least 6 characters</p>
       </div>
-
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create account</button>
     </form>
 
@@ -67,19 +71,33 @@
 </main>
 
 <script type="module">
-  import { signup } from "/js/auth.js";
+  import { signup, continueWithGoogle, authErrorMessage } from "/js/auth.js";
   import { lookupCode, normalizeCode, rememberPendingCode, pendingCode } from "/js/referrals.js";
+
+  const $ = (id) => document.getElementById(id);
+  const errBox = $("err");
+  const showError = (msg) => { if (!msg) return; errBox.textContent = msg; errBox.classList.add("show"); };
+  const clearError = () => errBox.classList.remove("show");
 
   const cards = document.querySelectorAll(".radio-card");
   function selectRole(card) {
     cards.forEach((c) => c.classList.toggle("selected", c === card));
     card.querySelector("input").checked = true;
-    document.getElementById("name-label").textContent = card.dataset.role === "company" ? "Company name" : "Full name";
+    $("name-label").textContent = card.dataset.role === "company" ? "Company name" : "Your name";
+    clearError();
   }
   cards.forEach((card) => card.querySelector("input").addEventListener("change", () => selectRole(card)));
-  const preselect = new URLSearchParams(location.search).get("role");
-  const preselected = document.querySelector(`.radio-card[data-role="${preselect === "company" ? "company" : preselect === "promoter" ? "promoter" : ""}"]`);
-  if (preselected) selectRole(preselected);
+  const preset = new URLSearchParams(location.search).get("role");
+  if (preset === "promoter" || preset === "company") selectRole(document.querySelector(`.radio-card[data-role="${preset}"]`));
+  const selectedRole = () => document.querySelector('input[name="role"]:checked')?.value;
+
+  $("pw-toggle").addEventListener("click", (e) => {
+    const input = $("password");
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    e.currentTarget.textContent = show ? "Hide" : "Show";
+    e.currentTarget.setAttribute("aria-label", show ? "Hide password" : "Show password");
+  });
 
   // Invite links land here as /auth/signup?ref=CODE (via /r/CODE).
   const refParam = new URLSearchParams(location.search).get("ref");
@@ -88,54 +106,54 @@
   const inviteCode = normalizeCode(refParam || pendingCode());
   if (inviteCode) {
     lookupCode(inviteCode).then((referrerId) => {
-      const note = document.getElementById("invite-note");
-      if (referrerId) {
-        referral = { code: inviteCode, referrerId };
-        note.textContent = `You were invited with code ${inviteCode}.`;
-      } else {
-        note.textContent = `Invite code ${inviteCode} wasn't found. You can still sign up.`;
-      }
+      const note = $("invite-note");
+      if (!referrerId) return;
+      referral = { code: inviteCode, referrerId };
+      note.textContent = `You were invited with code ${inviteCode}.`;
       note.classList.remove("hidden");
     }).catch(() => {});
   }
 
-  const errBox = document.getElementById("err");
-  const showError = (msg) => { errBox.textContent = msg; errBox.classList.add("show"); };
+  const nextPage = (role) => role === "company" ? "/company/profile?onboarding=1" : "/promoter/profile?onboarding=1";
 
-  document.getElementById("signup-form").addEventListener("submit", async (e) => {
+  $("google-btn").addEventListener("click", async (e) => {
+    clearError();
+    const role = selectedRole();
+    if (!role) return showError("First choose whether you're a promoter or a company.");
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const { profile, isNew } = await continueWithGoogle({ role, referral });
+      if (isNew) location.href = nextPage(role);
+      else location.href = profile.role === "company" ? "/company/dashboard" : "/promoter/dashboard";
+    } catch (err) {
+      showError(authErrorMessage(err));
+      btn.disabled = false;
+    }
+  });
+
+  $("signup-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    errBox.classList.remove("show");
-    const role = document.querySelector('input[name="role"]:checked')?.value;
-    const name = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-    const confirm = document.getElementById("confirm").value;
-
+    clearError();
+    const role = selectedRole();
+    const name = $("name").value.trim();
+    const email = $("email").value.trim();
+    const password = $("password").value;
     if (!role) return showError("Choose whether you're a promoter or a company.");
     if (!name) return showError("Enter your name.");
     if (!email) return showError("Enter your email address.");
     if (password.length < 6) return showError("Use a password with at least 6 characters.");
-    if (password !== confirm) return showError("The two passwords don't match.");
 
-    const btn = document.getElementById("submit-btn");
+    const btn = $("submit-btn");
     btn.disabled = true; btn.textContent = "Creating account…";
     try {
       await signup({ email, password, role, name, referral });
-      location.href = role === "company" ? "/company/profile?onboarding=1" : "/promoter/profile?onboarding=1";
+      location.href = nextPage(role);
     } catch (err) {
       showError(authErrorMessage(err));
       btn.disabled = false; btn.textContent = "Create account";
     }
   });
-
-  function authErrorMessage(err) {
-    const code = err.code || "";
-    if (code.includes("email-already-in-use")) return "There's already an account with this email. Try logging in instead.";
-    if (code.includes("weak-password")) return "That password is too weak. Use at least 6 characters.";
-    if (code.includes("invalid-email")) return "That email address doesn't look right.";
-    if (code.includes("network-request-failed")) return "You seem to be offline. Check your connection and try again.";
-    return "Something went wrong. Please try again.";
-  }
 </script>
 </body>
 </html>

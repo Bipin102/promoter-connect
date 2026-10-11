@@ -268,3 +268,19 @@ a.list-row:hover { background: var(--surface-2); }
   .invite-link .input { flex-basis: 100%; }
   .invite-link .btn { flex: 1; }
 }
+
+/* ============ CHIPS ============ */
+.chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--border-strong); font-size: 14px; color: var(--text-dim); background: var(--bg-alt);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.chip:hover span { border-color: var(--text-faint); color: var(--text); }
+.chip input:checked + span { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); font-weight: 500; }
+.chip input:checked + span::before { content: "✓"; margin-right: 6px; font-size: 12px; }
+.chip input:focus-visible + span { box-shadow: var(--focus-ring); }
+.chip-add { display: flex; gap: 8px; margin-top: 10px; max-width: 360px; }
+.chip-add .input { height: 36px; font-size: 13px; }
