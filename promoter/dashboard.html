@@ -28,17 +28,18 @@
     </div>
   </div>
 
-  <div class="stat-grid" id="stats"></div>
-
   <section class="section">
     <div class="section-head">
-      <h2>Urgent gigs open now</h2>
-      <a href="/promoter/jobs?type=urgent">See all</a>
+      <h2>Open gigs <span class="text-faint" id="open-count" style="font-weight:400"></span></h2>
+      <a href="/promoter/jobs">See all gigs</a>
     </div>
-    <div class="card-grid cols-2" id="urgent-jobs">
+    <div class="card-grid cols-2" id="open-gigs">
+      <div class="skeleton" aria-hidden="true"><div class="skeleton-line" style="width:40%"></div><div class="skeleton-line" style="width:70%"></div></div>
       <div class="skeleton" aria-hidden="true"><div class="skeleton-line" style="width:40%"></div><div class="skeleton-line" style="width:70%"></div></div>
     </div>
   </section>
+
+  <div class="stat-grid" id="stats"></div>
 
   <section class="section">
     <div class="section-head">
@@ -70,9 +71,10 @@
   import { mountInviteCard } from "/js/referrals.js";
   import { getPromoter } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
-  import { listPromoterBookings } from "/js/booking.js";
+  import { listPromoterBookings, promoterApplicationStatuses } from "/js/booking.js";
   import { listRatingsFor } from "/js/ratings.js";
-  import { jobCardHTML, tickCountdowns, bookingRowHTML, tickEventStarts, ACTIVE_BOOKING_STATUSES } from "/js/render.js";
+  import { jobCardHTML, tickCountdowns, bookingRowHTML, tickEventStarts, groupBookings } from "/js/render.js";
+  import { eventStartDate } from "/js/ui.js";
   import { stars, escapeHTML, fmtMoney } from "/js/ui.js";
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
@@ -80,23 +82,29 @@
   const { user, profile } = await requireAuth("promoter");
   mountInviteCard(document.getElementById("invite-card"), { uid: user.uid, name: profile.displayName, code: profile.referralCode });
 
-  const [promoter, openEvents, bookings, ratings] = await Promise.all([
-    getPromoter(user.uid), listOpenEvents({ hiringType: "urgent" }), listPromoterBookings(user.uid), listRatingsFor(user.uid),
+  const [promoter, openEvents, bookings, ratings, applied] = await Promise.all([
+    getPromoter(user.uid), listOpenEvents(), listPromoterBookings(user.uid), listRatingsFor(user.uid), promoterApplicationStatuses(user.uid),
   ]);
 
   const firstName = promoter.fullName?.split(" ")[0];
   if (firstName) document.getElementById("greeting").textContent = `Hi, ${firstName}`;
 
-  const urgent = (await Promise.all(openEvents.map(reconcileUrgentWindow))).filter((e) => e.status === "open");
+  // Open gigs: everything still taking people, urgent first, then soonest.
+  const bookedEventIds = new Set(bookings.map((b) => b.eventId));
+  const open = (await Promise.all(openEvents.map(reconcileUrgentWindow)))
+    .filter((e) => e.status === "open" && !e.isDemo && !bookedEventIds.has(e.id))
+    .sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent")
+      || (eventStartDate(a.date, a.startTime) || 0) - (eventStartDate(b.date, b.startTime) || 0));
+  open.forEach((e) => { e._application = applied[e.id]; });
   if (promoter.location?.lat != null) {
-    urgent.forEach((e) => {
+    open.forEach((e) => {
       if (!e.locationGeo) return;
       e._distanceLabel = distanceLabel(promoter.location, e.locationGeo);
       e._reachable = isReachableWithinHour(promoter.location, e.locationGeo);
     });
   }
 
-  const upcoming = bookings.filter((b) => ACTIVE_BOOKING_STATUSES.includes(b.status));
+  const { upcoming } = groupBookings(bookings);
   const earned = bookings.filter((b) => b.status === "completed").reduce((sum, b) => sum + (b.paymentAmount || 0), 0);
 
   document.getElementById("stats").innerHTML = `
@@ -105,17 +113,24 @@
     <div class="stat-tile"><div class="stat-label">Average rating</div><div class="stat-value">${promoter.ratingCount ? promoter.ratingAvg.toFixed(1) : "–"}</div></div>
     <div class="stat-tile"><div class="stat-label">Earned</div><div class="stat-value">${fmtMoney(earned)}</div><div class="stat-sub">from completed events</div></div>`;
 
-  const urgentHost = document.getElementById("urgent-jobs");
-  if (urgent.length) {
-    urgentHost.innerHTML = urgent.slice(0, 4).map((e) => jobCardHTML(e, { showActions: false })).join("");
-    urgentHost.querySelectorAll(".job-card").forEach((card) => {
+  const openHost = document.getElementById("open-gigs");
+  document.getElementById("open-count").textContent = open.length ? `(${open.length})` : "";
+  if (open.length) {
+    openHost.innerHTML = open.slice(0, 6).map((e) => jobCardHTML(e, { showActions: false })).join("");
+    openHost.querySelectorAll(".job-card").forEach((card) => {
+      const event = open.find((e) => e.id === card.dataset.eventId);
+      const href = `/promoter/jobs?q=${encodeURIComponent(event.eventName)}`;
       card.classList.add("clickable");
-      card.addEventListener("click", () => { location.href = "/promoter/jobs?type=urgent"; });
+      card.setAttribute("role", "link");
+      card.tabIndex = 0;
+      card.addEventListener("click", () => { location.href = href; });
+      card.addEventListener("keydown", (ev) => { if (ev.key === "Enter") location.href = href; });
+      if (event._application) card.insertAdjacentHTML("beforeend", `<div class="text-sm text-dim">You've applied</div>`);
     });
-    tickCountdowns(urgentHost);
-    setInterval(() => tickCountdowns(urgentHost), 1000);
+    tickCountdowns(openHost);
+    setInterval(() => tickCountdowns(openHost), 1000);
   } else {
-    urgentHost.outerHTML = `<div class="empty-state boxed">No urgent gigs right now. They show up here the moment a company posts one.</div>`;
+    openHost.outerHTML = `<div class="empty-state boxed">No open gigs right now. You'll get a notification the moment a company posts one.</div>`;
   }
 
   document.getElementById("upcoming").innerHTML = upcoming.length

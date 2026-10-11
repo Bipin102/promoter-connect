@@ -57,6 +57,7 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { pendingApplicationCounts } from "/js/booking.js";
+  import { hasEnded } from "/js/render.js";
   import { mountInviteCard } from "/js/referrals.js";
   import { getCompany } from "/js/db.js";
   import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
@@ -127,7 +128,20 @@
       </div>`;
   }
 
-  const upcoming = events.filter((e) => ["open", "fulfilled"].includes(e.status));
+  // Over, with people booked, but not closed: closing it moves bookings to Completed and unlocks ratings.
+  const toClose = events.filter((e) => ["open", "fulfilled", "window_ended"].includes(e.status) && (e.positionsFilled || 0) > 0 && hasEnded(e));
+  if (toClose.length) {
+    document.getElementById("waiting").insertAdjacentHTML("beforeend", `
+      <div class="action-banner mb-24" role="status">
+        <div>
+          <strong>${toClose.length === 1 ? `${escapeHTML(toClose[0].eventName)} has ended` : `${toClose.length} events have ended`}</strong>
+          <p>Mark ${toClose.length === 1 ? "it" : "them"} as done so your promoters see ${toClose.length === 1 ? "it" : "them"} as completed and you can rate each other.</p>
+        </div>
+        <a class="btn btn-primary" href="/company/event?id=${encodeURIComponent(toClose[0].id)}">Close ${toClose.length === 1 ? "event" : "the first one"}</a>
+      </div>`);
+  }
+
+  const upcoming = events.filter((e) => ["open", "fulfilled"].includes(e.status) && !hasEnded(e));
   document.getElementById("upcoming").innerHTML = upcoming.length
     ? `<div class="list">${upcoming.slice(0, 6).map(eventRow).join("")}</div>`
     : `<div class="empty-state boxed"><h3>No upcoming events</h3>Post your first event and promoters can start booking.<br><a class="btn btn-primary" href="/company/post-event">Post an event</a></div>`;

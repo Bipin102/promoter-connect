@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  collection, doc, getDoc, getDocs, updateDoc, query, where, onSnapshot, runTransaction
+  collection, doc, getDoc, getDocs, updateDoc, query, where, onSnapshot, runTransaction, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
 
@@ -45,7 +45,29 @@ export async function postEvent(companyId, data) {
     tx.set(ref, payload);
     if (company.exists()) tx.update(companyRef, { eventsPosted: (company.data().eventsPosted || 0) + 1, lastPostedEventId: ref.id });
   });
+  await notifyPromotersOfNewEvent(payload).catch(() => {});
   return ref.id;
+}
+
+/** Puts the new gig in every promoter's notification bell. */
+async function notifyPromotersOfNewEvent(event) {
+  const promoters = await getDocs(collection(db, "promoters"));
+  const ids = promoters.docs.map((d) => d.id).filter((id) => !id.startsWith("demo_"));
+  const pay = `₹${Number(event.paymentAmount || 0).toLocaleString("en-IN")}`;
+  const date = new Date(`${event.date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const note = {
+    type: "new_event",
+    title: (event.hiringType === "urgent" ? "Urgent gig: " : "New gig: ") + event.eventName.slice(0, 100),
+    message: `${event.location} · ${date} · ${pay}`.slice(0, 500),
+    link: `/promoter/jobs?q=${encodeURIComponent(event.eventName)}`,
+    read: false,
+  };
+  // Firestore batches cap at 500 writes.
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 400).forEach((userId) => batch.set(doc(collection(db, "notifications")), { ...note, userId, createdAt: serverTimestamp() }));
+    await batch.commit();
+  }
 }
 
 export async function getEvent(eventId) {

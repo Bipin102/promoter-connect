@@ -3,6 +3,38 @@ import { icon } from "./icons.js";
 
 export const ACTIVE_BOOKING_STATUSES = ["booked", "on_the_way", "checked_in", "active"];
 
+/** When an event (or booking) finishes; an end time earlier than the start means it runs past midnight. */
+export function eventEndDate(ev) {
+  const start = eventStartDate(ev.date, ev.startTime);
+  const end = eventStartDate(ev.date, ev.endTime || ev.startTime);
+  if (!start || !end) return null;
+  if (end < start) end.setDate(end.getDate() + 1);
+  return end;
+}
+
+export function hasEnded(ev, now = Date.now()) {
+  const end = eventEndDate(ev);
+  return Boolean(end && end.getTime() < now);
+}
+
+/**
+ * Upcoming = still to happen. Completed = closed by the company, or already
+ * over (shown as "Ended" until the company closes it). Cancelled = cancelled.
+ */
+export function groupBookings(bookings) {
+  const upcoming = [], completed = [], cancelled = [];
+  for (const b of bookings) {
+    if (b.status === "cancelled") cancelled.push(b);
+    else if (b.status === "completed") completed.push(b);
+    else if (ACTIVE_BOOKING_STATUSES.includes(b.status) && hasEnded(b)) completed.push({ ...b, _ended: true });
+    else if (ACTIVE_BOOKING_STATUSES.includes(b.status)) upcoming.push(b);
+  }
+  const byStart = (a, b) => (eventStartDate(a.date, a.startTime) || 0) - (eventStartDate(b.date, b.startTime) || 0);
+  upcoming.sort(byStart);
+  completed.sort((a, b) => byStart(b, a));
+  return { upcoming, completed, cancelled };
+}
+
 export function eventMetaHTML(ev) {
   return `
     <div class="meta">
@@ -84,7 +116,7 @@ export function tickCountdowns(container) {
 
 /** A promoter's booking as a list row, with a live "starts in" line for upcoming ones. */
 export function bookingRowHTML(b) {
-  const upcoming = ["booked", "on_the_way"].includes(b.status);
+  const upcoming = ["booked", "on_the_way"].includes(b.status) && !b._ended;
   const start = eventStartDate(b.date, b.startTime)?.getTime() || "";
   return `
     <a href="/promoter/event?id=${encodeURIComponent(b.id)}" class="list-row">
@@ -94,7 +126,7 @@ export function bookingRowHTML(b) {
         ${upcoming && start ? `<div class="countdown" data-event-start="${start}"></div>` : ""}
       </div>
       <div class="list-row-side">
-        ${statusPill(b.status)}
+        ${statusPill(b._ended ? "ended" : b.status)}
         <span>${fmtMoney(b.paymentAmount)}</span>
       </div>
     </a>`;

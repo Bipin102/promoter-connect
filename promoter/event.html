@@ -31,7 +31,7 @@
   import { getEvent } from "/js/events.js";
   import { submitCheckIn, listCheckInsForBooking } from "/js/checkin.js";
   import { hasRated, submitRating, categoriesFor } from "/js/ratings.js";
-  import { eventDetailsHTML } from "/js/render.js";
+  import { eventDetailsHTML, hasEnded } from "/js/render.js";
   import { toast, confirmDialog, escapeHTML, safeUrl, statusPill, fmtEventCountdown, eventStartDate, fmtTimestamp, fmtMoney } from "/js/ui.js";
   import { icon } from "/js/icons.js";
   import { mountRatingForm } from "/js/rating-form.js";
@@ -56,7 +56,8 @@
       listCheckInsForBooking(bookingId, user.uid),
       booking.status === "completed" ? hasRated(bookingId, "promoter") : false,
     ]);
-    const upcoming = ["booked", "on_the_way"].includes(booking.status);
+    const ended = ["booked", "on_the_way", "checked_in"].includes(booking.status) && hasEnded(booking);
+    const upcoming = ["booked", "on_the_way"].includes(booking.status) && !ended;
 
     content.innerHTML = `
       <div class="card mb-24">
@@ -65,8 +66,9 @@
             <h1>${escapeHTML(booking.eventName)}</h1>
             ${booking.brand ? `<p>${escapeHTML(booking.brand)}</p>` : ""}
           </div>
-          ${statusPill(booking.status)}
+          ${statusPill(ended ? "ended" : booking.status)}
         </div>
+        ${ended ? `<p class="action-banner mb-16" style="display:block">This event is over. It moves to Completed for good once the company closes it, and then you can rate them.</p>` : ""}
         ${eventDetailsHTML(event || booking)}
         <dl class="detail-list mt-16">
           <dt>Booking code</dt><dd><code>${escapeHTML(booking.bookingCode)}</code></dd>

@@ -110,6 +110,7 @@ const STATUS_LABELS = {
   accepted: "Accepted",
   rejected: "Rejected",
   paid: "Paid",
+  ended: "Ended",
   available: "Available",
   busy: "Busy",
 };
