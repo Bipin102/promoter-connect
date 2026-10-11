@@ -71,18 +71,30 @@
       </div>
     </div>
   </section>
+
+  <section class="lp-follow">
+    <div class="container lp-follow-inner">
+      <div>
+        <h2>Follow Promoter Connect</h2>
+        <p>New gigs, updates and stories from events. Questions? Message us on any of these.</p>
+      </div>
+      <div class="lp-follow-links" id="follow-links"></div>
+    </div>
+  </section>
 </main>
 
 <div id="pc-footer"></div>
 
 <script type="module">
-  import { mountLayout } from "/js/layout.js";
+  import { mountLayout, SOCIAL_LINKS } from "/js/layout.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
   import { fmtDate, fmtMoney, escapeHTML } from "/js/ui.js";
   import { icon } from "/js/icons.js";
 
   mountLayout();
   document.getElementById("search-icon").innerHTML = icon("search", 17);
+  document.getElementById("follow-links").innerHTML = SOCIAL_LINKS.map(([name, href, iconName]) => `
+    <a class="btn btn-secondary" href="${href}" target="_blank" rel="noopener noreferrer">${icon(iconName, 16)}${name}</a>`).join("");
 
   const point = ([iconName, title, text]) => `
     <li>

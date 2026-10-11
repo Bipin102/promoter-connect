@@ -2,6 +2,17 @@ import { watchAuth, logout, isAdmin } from "./auth.js";
 import { mountNotificationBell } from "./notifications.js";
 import { icon } from "./icons.js";
 
+export const SOCIAL_LINKS = [
+  ["LinkedIn", "https://www.linkedin.com/in/promoter-connect", "linkedin"],
+  ["X", "https://x.com/PromoterConnect", "xBrand"],
+  ["Instagram", "https://www.instagram.com/promoterconnect", "instagram"],
+];
+
+export function socialLinksHTML(size = 18) {
+  return SOCIAL_LINKS.map(([name, href, iconName]) =>
+    `<a href="${href}" target="_blank" rel="noopener noreferrer" aria-label="Promoter Connect on ${name}" title="${name}">${icon(iconName, size)}</a>`).join("");
+}
+
 const NAV = {
   guest: [
     ["Find gigs", "/promoter/jobs"],
@@ -110,7 +121,10 @@ function renderFooter(host, signedIn) {
   if (signedIn) {
     host.innerHTML = `
       <footer class="pc-footer pc-footer--slim">
-        <div class="container"><p class="pc-footer-bottom">© ${new Date().getFullYear()} Promoter Connect · Built by a promoter, for promoters.</p></div>
+        <div class="container pc-footer-slim-row">
+          <p class="pc-footer-bottom">© ${new Date().getFullYear()} Promoter Connect · Built by a promoter, for promoters.</p>
+          <div class="social-links">${socialLinksHTML(16)}</div>
+        </div>
       </footer>`;
     return;
   }
@@ -121,6 +135,7 @@ function renderFooter(host, signedIn) {
           <div>
             <div class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</div>
             <p class="pc-footer-tagline">Built by a promoter, for promoters. Event staffing without the WhatsApp chase.</p>
+            <div class="social-links mt-16">${socialLinksHTML(18)}</div>
           </div>
           <div class="pc-footer-links">
             <a href="/promoter/jobs">Find gigs</a>
