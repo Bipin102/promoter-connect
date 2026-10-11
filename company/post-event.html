@@ -102,7 +102,6 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { postEvent } from "/js/events.js";
-  import { updateCompany, getCompany } from "/js/db.js";
   import { toast } from "/js/ui.js";
   import { getCurrentLocation } from "/js/geo.js";
 
@@ -189,8 +188,6 @@
     submitBtn.disabled = true; submitBtn.textContent = "Posting…";
     try {
       const eventId = await postEvent(user.uid, data);
-      const company = await getCompany(user.uid);
-      await updateCompany(user.uid, { eventsPosted: (company.eventsPosted || 0) + 1 });
       location.href = `/company/event?id=${encodeURIComponent(eventId)}&posted=1`;
     } catch {
       toast("Couldn't post the event. Please try again.", "error");

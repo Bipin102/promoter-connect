@@ -23,7 +23,7 @@ export async function uploadImage(path, file) {
   if (file.size > 8 * 1024 * 1024) throw new Error("That image is over 8 MB. Please pick a smaller one.");
 
   const { error } = await supabase.storage.from(supabaseConfig.bucket).upload(path, file, {
-    upsert: true,
+    upsert: false,
     contentType: file.type,
   });
   if (error) throw new Error("The upload didn't go through. Please try again.");

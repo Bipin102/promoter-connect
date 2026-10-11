@@ -1,6 +1,11 @@
 rules_version = '2';
 
 // Deploy: Firebase Console → Firestore Database → Rules → paste this → Publish.
+//
+// There's no backend, so every write comes from a browser. These rules check
+// each write is one the site itself would make: counters only move together
+// with the change that justifies them (a new rating, a completed booking),
+// and nobody can edit fields that are earned rather than chosen.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,35 +14,68 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
-    // Sample docs written by admin/seed.html.
     function isDemoId(id) { return id.matches('demo_.*'); }
-    function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function data() { return request.resource.data; }
+    function changedKeys() { return data().diff(resource.data).affectedKeys(); }
+    function docPath(collectionName, id) { return /databases/$(database)/documents/$(collectionName)/$(id); }
+    function shortText(field, max) { return !(field in data()) || (data()[field] is string && data()[field].size() <= max); }
 
-    // There's no backend, so the other party's client keeps these counters up to
-    // date: the company bumps eventsCompleted when it closes an event, and the
-    // rater updates the running average. Only a +1 step on those fields is allowed.
-    function isCounterBump() {
-      return isSignedIn() && (
-        (changedKeys().hasOnly(['eventsCompleted']) &&
-          request.resource.data.eventsCompleted == resource.data.get('eventsCompleted', 0) + 1) ||
-        (changedKeys().hasOnly(['ratingAvg', 'ratingCount']) &&
-          request.resource.data.ratingCount == resource.data.get('ratingCount', 0) + 1 &&
-          request.resource.data.ratingAvg >= 0 && request.resource.data.ratingAvg <= 5)
+    // ---------- earned profile fields ----------
+
+    // Earned, not chosen: nobody edits these directly, including the owner.
+    function protectedProfileFields() {
+      return ['verified', 'quickResponder', 'ratingAvg', 'ratingCount', 'eventsCompleted', 'eventsPosted',
+              'lastRatingId', 'lastCompletedBookingId', 'lastCompletedEventId', 'lastPostedEventId'];
+    }
+    function freshProfile() {
+      return data().get('verified', false) == false && data().get('quickResponder', false) == false &&
+        data().get('ratingAvg', 0) == 0 && data().get('ratingCount', 0) == 0 &&
+        data().get('eventsCompleted', 0) == 0 && data().get('eventsPosted', 0) == 0;
+    }
+    function ownerProfileEdit(uid) {
+      return isOwner(uid) && !changedKeys().hasAny(protectedProfileFields()) &&
+        shortText('fullName', 100) && shortText('companyName', 120) && shortText('description', 2000);
+    }
+
+    // A rating's average only changes together with the brand-new rating doc for this profile.
+    function ratingBump(uid) {
+      let ratingPath = docPath('ratings', data().lastRatingId);
+      let rating = getAfter(ratingPath).data;
+      let prevCount = resource.data.get('ratingCount', 0);
+      // Divide by a float: whole-number division would round the average down.
+      let expected = (resource.data.get('ratingAvg', 0) * prevCount + rating.overall) / (prevCount + 1.0);
+      return changedKeys().hasOnly(['ratingAvg', 'ratingCount', 'lastRatingId']) &&
+        !exists(ratingPath) && rating.toId == uid &&
+        data().ratingCount == prevCount + 1 &&
+        math.abs(data().ratingAvg - expected) < 0.0001;
+    }
+
+    // A promoter's completed count goes up once per booking the company completes in the same write.
+    function promoterCompletedBump(uid) {
+      let bookingPath = docPath('bookings', data().lastCompletedBookingId);
+      return changedKeys().hasOnly(['eventsCompleted', 'lastCompletedBookingId']) &&
+        data().eventsCompleted == resource.data.get('eventsCompleted', 0) + 1 &&
+        get(bookingPath).data.status != 'completed' &&
+        getAfter(bookingPath).data.status == 'completed' &&
+        getAfter(bookingPath).data.promoterId == uid;
+    }
+
+    // A company's counters go up with the event it posts or completes in the same write.
+    function companyCounterBump(uid) {
+      return isOwner(uid) && (
+        (changedKeys().hasOnly(['eventsPosted', 'lastPostedEventId']) &&
+          data().eventsPosted == resource.data.get('eventsPosted', 0) + 1 &&
+          !exists(docPath('events', data().lastPostedEventId)) &&
+          getAfter(docPath('events', data().lastPostedEventId)).data.companyId == uid) ||
+        (changedKeys().hasOnly(['eventsCompleted', 'lastCompletedEventId']) &&
+          data().eventsCompleted == resource.data.get('eventsCompleted', 0) + 1 &&
+          get(docPath('events', data().lastCompletedEventId)).data.status != 'completed' &&
+          getAfter(docPath('events', data().lastCompletedEventId)).data.status == 'completed' &&
+          getAfter(docPath('events', data().lastCompletedEventId)).data.companyId == uid)
       );
     }
 
-    function ratingBookingAllows(booking) {
-      return booking.status == 'completed' && (
-        (request.resource.data.fromRole == 'promoter' && booking.promoterId == request.auth.uid) ||
-        (request.resource.data.fromRole == 'company' && booking.companyId == request.auth.uid)
-      );
-    }
-
-    function payoutBookingMatches(booking) {
-      return booking.promoterId == request.resource.data.promoterId &&
-        booking.companyId == request.resource.data.companyId &&
-        booking.status != 'cancelled';
-    }
+    // ---------- accounts ----------
 
     // Admins are added by hand in the Firebase console: create a doc at
     // admins/{auth-uid}. Nobody can write it from the client.
@@ -48,14 +86,23 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid) && request.resource.data.role == resource.data.role;
+      allow create: if isOwner(uid) && data().role in ['promoter', 'company'] &&
+        data().createdAt == request.time && !('referralCode' in data());
+      // Role and sign-up time can't change; an invite code is set once, and only to a code you own.
+      allow update: if isOwner(uid) &&
+        data().role == resource.data.role &&
+        data().createdAt == resource.data.createdAt &&
+        (!changedKeys().hasAny(['referralCode']) || (
+          !('referralCode' in resource.data) &&
+          getAfter(docPath('referralCodes', data().referralCode)).data.uid == uid));
     }
 
     match /promoters/{uid} {
       allow read: if isSignedIn();
-      allow write: if isOwner(uid) || (isAdmin() && isDemoId(uid));
-      allow update: if isCounterBump();
+      allow create: if (isOwner(uid) && freshProfile()) || (isAdmin() && isDemoId(uid));
+      allow update: if ownerProfileEdit(uid) || (isAdmin() && isDemoId(uid)) ||
+        (isSignedIn() && (ratingBump(uid) || promoterCompletedBump(uid)));
+      allow delete: if isOwner(uid) || (isAdmin() && isDemoId(uid));
 
       match /portfolio/{imgId} {
         allow read: if isSignedIn();
@@ -65,72 +112,154 @@ service cloud.firestore {
 
     match /companies/{uid} {
       allow read: if isSignedIn();
-      allow write: if isOwner(uid) || (isAdmin() && isDemoId(uid));
-      allow update: if isCounterBump();
+      allow create: if (isOwner(uid) && freshProfile()) || (isAdmin() && isDemoId(uid));
+      allow update: if ownerProfileEdit(uid) || companyCounterBump(uid) || (isAdmin() && isDemoId(uid)) ||
+        (isSignedIn() && ratingBump(uid));
+      allow delete: if isOwner(uid) || (isAdmin() && isDemoId(uid));
+    }
+
+    // ---------- events and hiring ----------
+
+    function validNewEvent() {
+      return data().positionsFilled == 0 && data().status == 'open' &&
+        data().hiringType in ['normal', 'urgent'] &&
+        data().positionsRequired is int && data().positionsRequired >= 1 && data().positionsRequired <= 500 &&
+        data().paymentAmount is number && data().paymentAmount >= 0 &&
+        shortText('eventName', 120) && shortText('description', 2000) && shortText('specialInstructions', 1000) &&
+        (data().hiringType == 'normal' || data().urgentDeadlineMs <= request.time.toMillis() + 3 * 60 * 60 * 1000);
+    }
+
+    // Someone other than the company may only: take a spot (with their new
+    // booking in the same write), give one back (cancelling their booking in
+    // the same write), or close an urgent post whose hour has run out.
+    function fulfilmentUpdate(eventId) {
+      let filled = resource.data.get('positionsFilled', 0);
+      let newFilled = data().get('positionsFilled', 0);
+      let myBooking = docPath('bookings', eventId + '_' + request.auth.uid);
+      return changedKeys().hasOnly(['positionsFilled', 'status', 'fulfilledAt', 'updatedAt']) && (
+        (newFilled == filled + 1 && newFilled <= resource.data.positionsRequired &&
+          resource.data.status == 'open' && resource.data.hiringType == 'urgent' &&
+          request.time.toMillis() <= resource.data.urgentDeadlineMs &&
+          data().status == (newFilled == resource.data.positionsRequired ? 'fulfilled' : 'open') &&
+          !exists(myBooking) && existsAfter(myBooking)) ||
+        (newFilled == filled - 1 && newFilled >= 0 &&
+          resource.data.status in ['open', 'fulfilled', 'window_ended'] &&
+          data().status == (resource.data.status == 'fulfilled' ? 'open' : resource.data.status) &&
+          get(myBooking).data.status in ['booked', 'on_the_way'] &&
+          getAfter(myBooking).data.status == 'cancelled') ||
+        (changedKeys().hasOnly(['status', 'updatedAt']) &&
+          resource.data.hiringType == 'urgent' && resource.data.status == 'open' &&
+          data().status == 'window_ended' &&
+          request.time.toMillis() > resource.data.urgentDeadlineMs)
+      );
     }
 
     match /events/{eventId} {
       // Job posts are public so people can see what's open before signing up.
       allow read: if true;
-      allow create: if (isSignedIn() && request.resource.data.companyId == request.auth.uid) ||
+      allow create: if (isSignedIn() && data().companyId == request.auth.uid && validNewEvent()) ||
         (isAdmin() && isDemoId(eventId));
-      // Other users (a promoter booking a spot, or anyone noticing an expired
-      // urgent window) may only touch the fulfilment fields.
       allow update: if isSignedIn() && (
-        resource.data.companyId == request.auth.uid ||
+        (resource.data.companyId == request.auth.uid && data().companyId == resource.data.companyId &&
+          (!changedKeys().hasAny(['urgentDeadlineMs']) || data().urgentDeadlineMs <= request.time.toMillis() + 3 * 60 * 60 * 1000)) ||
         (isAdmin() && isDemoId(eventId)) ||
-        changedKeys().hasOnly(['positionsFilled', 'status', 'fulfilledAt', 'updatedAt'])
+        fulfilmentUpdate(eventId)
       );
       allow delete: if isOwner(resource.data.companyId);
     }
 
     match /applications/{appId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.promoterId == request.auth.uid &&
-        request.resource.data.status == 'pending';
+      allow create: if isSignedIn() &&
+        appId == data().eventId + '_' + request.auth.uid &&
+        data().promoterId == request.auth.uid && data().status == 'pending' &&
+        get(docPath('events', data().eventId)).data.companyId == data().companyId &&
+        get(docPath('events', data().eventId)).data.hiringType == 'normal' &&
+        get(docPath('events', data().eventId)).data.status == 'open';
       allow update: if isSignedIn() &&
-        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.companyId == request.auth.uid;
+        get(docPath('events', resource.data.eventId)).data.companyId == request.auth.uid &&
+        changedKeys().hasOnly(['status']) &&
+        resource.data.status == 'pending' && data().status in ['accepted', 'rejected'];
+    }
+
+    // A booking copies who, what and how much from its event, and is created
+    // in the same write that takes the spot.
+    function bookingMatchesEvent(eventId) {
+      let event = get(docPath('events', eventId)).data;
+      return data().companyId == event.companyId &&
+        data().paymentAmount == event.paymentAmount &&
+        data().eventName == event.eventName &&
+        getAfter(docPath('events', eventId)).data.positionsFilled == event.get('positionsFilled', 0) + 1;
     }
 
     match /bookings/{bookingId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.status == 'booked' && (
-        request.resource.data.promoterId == request.auth.uid ||
-        request.resource.data.companyId == request.auth.uid
-      );
-      // Promoters move their own booking along; only the company can complete it.
+      allow create: if isSignedIn() &&
+        bookingId == data().eventId + '_' + data().promoterId &&
+        data().status == 'booked' && data().paymentStatus == 'pending' &&
+        bookingMatchesEvent(data().eventId) && (
+          // A promoter booking an urgent spot directly.
+          (data().promoterId == request.auth.uid &&
+            get(docPath('events', data().eventId)).data.hiringType == 'urgent') ||
+          // A company accepting an application.
+          (data().companyId == request.auth.uid &&
+            get(docPath('applications', bookingId)).data.status == 'pending' &&
+            getAfter(docPath('applications', bookingId)).data.status == 'accepted')
+        );
+      // Promoters move their own booking along (cancelling gives the spot back
+      // in the same write); only the company can complete it.
       allow update: if isSignedIn() && (
         (resource.data.promoterId == request.auth.uid &&
           changedKeys().hasOnly(['status', 'updatedAt']) &&
-          request.resource.data.status in ['on_the_way', 'checked_in', 'cancelled']) ||
+          data().status in ['on_the_way', 'checked_in', 'cancelled'] &&
+          resource.data.status in ['booked', 'on_the_way', 'checked_in']) ||
         (resource.data.companyId == request.auth.uid &&
           changedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']))
       );
     }
 
     match /liveCheckIns/{id} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.promoterId == request.auth.uid;
+      // Photo and location are only for the promoter and the company on the booking.
+      allow read: if isSignedIn() &&
+        (resource.data.promoterId == request.auth.uid || resource.data.companyId == request.auth.uid);
+      allow create: if isSignedIn() && data().promoterId == request.auth.uid &&
+        get(docPath('bookings', data().bookingId)).data.promoterId == request.auth.uid &&
+        get(docPath('bookings', data().bookingId)).data.companyId == data().companyId;
+    }
+
+    function ratingBookingAllows(booking) {
+      return booking.status == 'completed' && (
+        (data().fromRole == 'promoter' && booking.promoterId == request.auth.uid &&
+          data().toId == booking.companyId && data().toRole == 'company') ||
+        (data().fromRole == 'company' && booking.companyId == request.auth.uid &&
+          data().toId == booking.promoterId && data().toRole == 'promoter')
+      );
     }
 
     match /ratings/{ratingId} {
       allow read: if isSignedIn();
-      // Only someone on a completed booking can rate, once per side
-      // (the `${bookingId}_${fromRole}` doc id in js/ratings.js).
+      // One rating per side per completed booking (doc id `${bookingId}_${fromRole}`).
       allow create: if (isAdmin() && isDemoId(ratingId)) || (
-        isSignedIn() && request.resource.data.fromId == request.auth.uid &&
-        request.resource.data.overall >= 1 && request.resource.data.overall <= 5 &&
-        ratingBookingAllows(get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data)
+        isSignedIn() && data().fromId == request.auth.uid &&
+        ratingId == data().bookingId + '_' + data().fromRole &&
+        data().overall is number && data().overall >= 1 && data().overall <= 5 &&
+        shortText('comment', 1000) &&
+        ratingBookingAllows(get(docPath('bookings', data().bookingId)).data)
       );
     }
 
+    // ---------- invites ----------
+
     // Invite codes: referralCodes/{CODE} -> { uid }. Anyone can look a code up
-    // (the sign-up page checks it before an account exists); codes are never edited.
+    // (the sign-up page checks it before an account exists). One code per
+    // person, never edited.
     match /referralCodes/{code} {
       allow get: if true;
       allow create: if isSignedIn() && code.matches('^[A-Z0-9]{4,12}$') &&
-        request.resource.data.keys().hasOnly(['uid', 'createdAt']) &&
-        request.resource.data.uid == request.auth.uid;
+        data().keys().hasOnly(['uid', 'createdAt']) &&
+        data().uid == request.auth.uid &&
+        !('referralCode' in get(docPath('users', request.auth.uid)).data) &&
+        getAfter(docPath('users', request.auth.uid)).data.referralCode == code;
     }
 
     // One doc per referred account, keyed by its uid, written during sign-up.
@@ -138,39 +267,59 @@ service cloud.firestore {
       allow read: if isSignedIn() &&
         (resource.data.referrerId == request.auth.uid || uid == request.auth.uid || isAdmin());
       allow create: if isOwner(uid) &&
-        request.resource.data.referrerId != request.auth.uid &&
-        get(/databases/$(database)/documents/referralCodes/$(request.resource.data.code)).data.uid == request.resource.data.referrerId &&
-        request.time < get(/databases/$(database)/documents/users/$(uid)).data.createdAt + duration.value(1, 'h');
+        data().referrerId != request.auth.uid &&
+        get(docPath('referralCodes', data().code)).data.uid == data().referrerId &&
+        request.time < get(docPath('users', uid)).data.createdAt + duration.value(1, 'h');
     }
 
-    // Payment details: private to the promoter, plus any company that has
-    // booked them (proved by payoutAccess/{promoterId}_{companyId}).
+    // ---------- payment details ----------
+
+    function payoutBookingMatches(booking) {
+      return booking.promoterId == data().promoterId &&
+        booking.companyId == data().companyId &&
+        booking.status != 'cancelled';
+    }
+
+    // Private to the promoter, plus any company that has booked them
+    // (proved by payoutAccess/{promoterId}_{companyId}).
     match /payoutDetails/{uid} {
       allow read: if isOwner(uid) ||
-        (isSignedIn() && exists(/databases/$(database)/documents/payoutAccess/$(uid + '_' + request.auth.uid)));
-      allow write: if isOwner(uid);
+        (isSignedIn() && exists(docPath('payoutAccess', uid + '_' + request.auth.uid)));
+      allow write: if isOwner(uid) &&
+        data().method in ['upi', 'bank', 'cash'] &&
+        shortText('upiId', 100) && shortText('accountName', 100) &&
+        shortText('accountNumber', 20) && shortText('ifsc', 11);
     }
 
     match /payoutAccess/{id} {
       allow read: if isSignedIn() &&
         (resource.data.promoterId == request.auth.uid || resource.data.companyId == request.auth.uid);
       allow create, update: if isSignedIn() &&
-        id == request.resource.data.promoterId + '_' + request.resource.data.companyId &&
-        request.resource.data.keys().hasOnly(['promoterId', 'companyId', 'bookingId']) &&
-        request.auth.uid in [request.resource.data.promoterId, request.resource.data.companyId] &&
-        payoutBookingMatches(get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data);
+        id == data().promoterId + '_' + data().companyId &&
+        data().keys().hasOnly(['promoterId', 'companyId', 'bookingId']) &&
+        request.auth.uid in [data().promoterId, data().companyId] &&
+        payoutBookingMatches(get(docPath('bookings', data().bookingId)).data);
     }
+
+    // ---------- notifications ----------
 
     match /notifications/{id} {
-      allow read, update: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // Written by the client of whoever triggered it (no backend). Contents are
-      // escaped wherever they're shown.
-      allow create: if isSignedIn();
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid &&
+        changedKeys().hasOnly(['read']);
+      // Written by whoever triggers it (no backend), so the shape is fixed and
+      // links must stay on this site. Contents are escaped wherever shown.
+      allow create: if isSignedIn() &&
+        data().keys().hasOnly(['userId', 'type', 'title', 'message', 'link', 'read', 'createdAt']) &&
+        data().read == false &&
+        data().title is string && data().title.size() <= 120 &&
+        data().message is string && data().message.size() <= 500 &&
+        (data().link == '' || data().link.matches('^/[^/].*'));
     }
 
+    // Not used by the site.
     match /payments/{id} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && resource.data.companyId == request.auth.uid;
+      allow read, write: if false;
     }
   }
 }

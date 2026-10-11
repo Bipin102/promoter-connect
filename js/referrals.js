@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  doc, getDoc, setDoc, updateDoc, collection, query, where, getCountFromServer
+  doc, getDoc, setDoc, writeBatch, collection, query, where, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { escapeHTML, toast } from "./ui.js";
 
@@ -37,8 +37,11 @@ export async function createReferralCode(uid, rawCode) {
   const code = normalizeCode(rawCode);
   if (!CODE_PATTERN.test(code)) throw friendlyError("Use 4 to 12 letters or numbers.");
   if (await lookupCode(code)) throw friendlyError("That code is taken. Try another.");
-  await setDoc(doc(db, "referralCodes", code), { uid, createdAt: serverTimestamp() });
-  await updateDoc(doc(db, "users", uid), { referralCode: code });
+  // One write, so a code always belongs to exactly one account.
+  const batch = writeBatch(db);
+  batch.set(doc(db, "referralCodes", code), { uid, createdAt: serverTimestamp() });
+  batch.update(doc(db, "users", uid), { referralCode: code });
+  await batch.commit();
   return code;
 }
 

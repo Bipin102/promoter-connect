@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  collection, addDoc, doc, getDoc, getDocs, updateDoc, query, where, onSnapshot
+  collection, doc, getDoc, getDocs, updateDoc, query, where, onSnapshot, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
 
@@ -38,7 +38,13 @@ export async function postEvent(companyId, data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
-  const ref = await addDoc(collection(db, "events"), payload);
+  const ref = doc(collection(db, "events"));
+  await runTransaction(db, async (tx) => {
+    const companyRef = doc(db, "companies", companyId);
+    const company = await tx.get(companyRef);
+    tx.set(ref, payload);
+    if (company.exists()) tx.update(companyRef, { eventsPosted: (company.data().eventsPosted || 0) + 1, lastPostedEventId: ref.id });
+  });
   return ref.id;
 }
 

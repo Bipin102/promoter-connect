@@ -241,26 +241,27 @@ export async function completeEvent(eventId) {
   const bookings = bookingsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const active = bookings.filter((b) => ["booked", "on_the_way", "checked_in", "active"].includes(b.status));
 
-  await Promise.all(active.map((b) => updateDoc(doc(db, "bookings", b.id), { status: "completed", updatedAt: serverTimestamp() })));
-
+  // Each counter bump travels with the status change that justifies it, which
+  // is what the security rules check for.
   await Promise.all(active.map((b) =>
     runTransaction(db, async (tx) => {
       const pRef = doc(db, "promoters", b.promoterId);
       const pSnap = await tx.get(pRef);
-      if (pSnap.exists()) tx.update(pRef, { eventsCompleted: (pSnap.data().eventsCompleted || 0) + 1 });
+      tx.update(doc(db, "bookings", b.id), { status: "completed", updatedAt: serverTimestamp() });
+      if (pSnap.exists()) tx.update(pRef, { eventsCompleted: (pSnap.data().eventsCompleted || 0) + 1, lastCompletedBookingId: b.id });
     })
   ));
 
-  if (active.length) {
-    const companyId = active[0].companyId;
-    await runTransaction(db, async (tx) => {
-      const cRef = doc(db, "companies", companyId);
-      const cSnap = await tx.get(cRef);
-      if (cSnap.exists()) tx.update(cRef, { eventsCompleted: (cSnap.data().eventsCompleted || 0) + 1 });
-    });
-  }
-
-  await updateDoc(doc(db, "events", eventId), { status: "completed", updatedAt: serverTimestamp() });
+  await runTransaction(db, async (tx) => {
+    const eventRef = doc(db, "events", eventId);
+    const event = (await tx.get(eventRef)).data();
+    const cRef = doc(db, "companies", event.companyId);
+    const cSnap = await tx.get(cRef);
+    tx.update(eventRef, { status: "completed", updatedAt: serverTimestamp() });
+    if (cSnap.exists() && active.length) {
+      tx.update(cRef, { eventsCompleted: (cSnap.data().eventsCompleted || 0) + 1, lastCompletedEventId: eventId });
+    }
+  });
   return active;
 }
 
@@ -273,7 +274,8 @@ export async function cancelBooking(bookingId, eventId) {
     tx.update(bookingRef, { status: "cancelled", updatedAt: serverTimestamp() });
     tx.update(eventRef, {
       positionsFilled: Math.max(0, (event.positionsFilled || 1) - 1),
-      status: "open",
+      // A full event has room again; an expired urgent post stays closed.
+      status: event.status === "fulfilled" ? "open" : event.status,
       updatedAt: serverTimestamp(),
     });
   });

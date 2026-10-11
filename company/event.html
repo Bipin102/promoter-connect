@@ -69,7 +69,7 @@
       bookings = list;
       loadPayouts(list);
       // A new booking may come with a check-in; keep both in step.
-      listCheckInsForEvent(eventId).then((c) => { checkIns = c; render(); });
+      listCheckInsForEvent(eventId, user.uid).then((c) => { checkIns = c; render(); });
     });
     watchApplicationsForEvent(eventId, (list) => {
       applications = list;

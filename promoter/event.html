@@ -53,7 +53,7 @@
     if (!booking || booking.promoterId !== user.uid) return notFound();
     const [event, checkIns, alreadyRated] = await Promise.all([
       getEvent(booking.eventId),
-      listCheckInsForBooking(bookingId),
+      listCheckInsForBooking(bookingId, user.uid),
       booking.status === "completed" ? hasRated(bookingId, "promoter") : false,
     ]);
     const upcoming = ["booked", "on_the_way"].includes(booking.status);

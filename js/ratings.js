@@ -1,6 +1,6 @@
 import { db, serverTimestamp } from "./firebase-init.js";
 import {
-  doc, getDoc, setDoc, runTransaction, collection, getDocs, query, where
+  doc, getDoc, runTransaction, collection, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
 
@@ -31,37 +31,36 @@ export async function submitRating(booking, fromRole, categories, comment = "") 
 
   const ratingId = `${booking.id}_${fromRole}`;
   const ratingRef = doc(db, "ratings", ratingId);
-  const existing = await getDoc(ratingRef);
-  if (existing.exists()) throw new Error("ALREADY_RATED");
-
   const toId = fromRole === "company" ? booking.promoterId : booking.companyId;
   const toRole = fromRole === "company" ? "promoter" : "company";
   const overall = average(categories);
+  const targetRef = doc(db, toRole === "promoter" ? "promoters" : "companies", toId);
 
-  await setDoc(ratingRef, {
-    bookingId: booking.id,
-    eventId: booking.eventId,
-    fromId: fromRole === "company" ? booking.companyId : booking.promoterId,
-    fromRole,
-    toId,
-    toRole,
-    categories,
-    overall,
-    comment,
-    createdAt: serverTimestamp(),
-  });
-
-  const targetCollection = toRole === "promoter" ? "promoters" : "companies";
+  // The rating and the running average change together; the security rules
+  // only accept an average update that comes with a brand-new rating.
   await runTransaction(db, async (tx) => {
-    const tRef = doc(db, targetCollection, toId);
-    const tSnap = await tx.get(tRef);
-    if (!tSnap.exists()) return;
-    const data = tSnap.data();
-    const prevCount = data.ratingCount || 0;
-    const prevAvg = data.ratingAvg || 0;
-    const newCount = prevCount + 1;
-    const newAvg = (prevAvg * prevCount + overall) / newCount;
-    tx.update(tRef, { ratingAvg: newAvg, ratingCount: newCount });
+    const [existing, target] = [await tx.get(ratingRef), await tx.get(targetRef)];
+    if (existing.exists()) throw new Error("ALREADY_RATED");
+    tx.set(ratingRef, {
+      bookingId: booking.id,
+      eventId: booking.eventId,
+      fromId: fromRole === "company" ? booking.companyId : booking.promoterId,
+      fromRole,
+      toId,
+      toRole,
+      categories,
+      overall,
+      comment: comment.slice(0, 1000),
+      createdAt: serverTimestamp(),
+    });
+    if (!target.exists()) return;
+    const prevCount = target.data().ratingCount || 0;
+    const prevAvg = target.data().ratingAvg || 0;
+    tx.update(targetRef, {
+      ratingAvg: (prevAvg * prevCount + overall) / (prevCount + 1),
+      ratingCount: prevCount + 1,
+      lastRatingId: ratingId,
+    });
   });
 
   await pushNotification(toId, {

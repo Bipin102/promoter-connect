@@ -2,6 +2,37 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    { "source": "/r/:code", "destination": "/auth/signup?ref=:code", "permanent": false }
+    {
+      "source": "/r/:code",
+      "destination": "/auth/signup?ref=:code",
+      "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://*.supabase.co https://cdn.jsdelivr.net https://apis.google.com; frame-src https://promoter-connect.firebaseapp.com https://accounts.google.com https://apis.google.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), geolocation=(self), microphone=(), payment=()"
+        }
+      ]
+    }
   ]
 }

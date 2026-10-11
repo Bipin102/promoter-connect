@@ -42,12 +42,12 @@ export async function submitCheckIn(booking, photoFile) {
   return checkInRef.id;
 }
 
-export async function listCheckInsForEvent(eventId) {
-  const snap = await getDocs(query(collection(db, "liveCheckIns"), where("eventId", "==", eventId)));
+export async function listCheckInsForEvent(eventId, companyId) {
+  const snap = await getDocs(query(collection(db, "liveCheckIns"), where("eventId", "==", eventId), where("companyId", "==", companyId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function listCheckInsForBooking(bookingId) {
-  const snap = await getDocs(query(collection(db, "liveCheckIns"), where("bookingId", "==", bookingId)));
+export async function listCheckInsForBooking(bookingId, promoterId) {
+  const snap = await getDocs(query(collection(db, "liveCheckIns"), where("bookingId", "==", bookingId), where("promoterId", "==", promoterId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
