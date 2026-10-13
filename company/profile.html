@@ -30,14 +30,15 @@
 
   <div class="two-col">
     <form class="card" id="profile-form" novalidate>
+      <p class="action-banner mb-24 hidden" id="profile-needed" role="status" style="display:block"></p>
       <div class="field">
-        <label for="logo-input">Logo</label>
+        <label for="logo-input">Logo <span class="required" aria-hidden="true">*</span></label>
         <div class="flex gap-16" style="align-items:center">
           <div id="logo-preview"></div>
           <input type="file" id="logo-input" accept="image/*" />
         </div>
       </div>
-      <div class="field"><label for="companyName">Company name</label><input type="text" id="companyName" autocomplete="organization" required /></div>
+      <div class="field"><label for="companyName">Company name <span class="required" aria-hidden="true">*</span></label><input type="text" id="companyName" autocomplete="organization" required /></div>
       <div class="field-row">
         <div class="field">
           <label for="industry">What you do</label>
@@ -45,12 +46,17 @@
           <input type="text" id="industry-other" class="input hidden mt-8" placeholder="Describe your business" aria-label="What you do" />
         </div>
         <div class="field">
-          <label for="location">City</label>
+          <label for="location">City <span class="required" aria-hidden="true">*</span></label>
           <select id="location" required></select>
           <input type="text" id="location-other" class="input hidden mt-8" placeholder="Type your city" aria-label="Your city" />
         </div>
       </div>
-      <div class="field"><label for="contact">Contact</label><input type="text" id="contact" placeholder="Phone or email" /><p class="field-hint">Shown on your public profile.</p></div>
+      <div class="field">
+        <label for="phone">Phone number <span class="required" aria-hidden="true">*</span></label>
+        <div class="phone-input"><span>+91</span><input type="tel" id="phone" inputmode="numeric" autocomplete="tel-national" placeholder="98200 12345" maxlength="17" required /></div>
+        <p class="field-hint">Promoters see this on your profile and on their bookings with you.</p>
+      </div>
+      <div class="field"><label for="contact">Email or website <span class="optional">(optional)</span></label><input type="text" id="contact" placeholder="hello@yourcompany.com" /></div>
       <div class="field"><label for="description">About</label><textarea id="description" rows="4" placeholder="The kind of events you run and the brands you work with"></textarea></div>
       <button type="submit" class="btn btn-primary btn-lg" id="save-btn">Save profile</button>
     </form>
@@ -71,6 +77,7 @@
   import { uploadImage } from "/js/storage.js";
   import { toast, stars, badgeList, escapeHTML, avatarHTML, selectWithOther } from "/js/ui.js";
   import { CITIES, INDUSTRIES } from "/js/options.js";
+  import { normalizePhone, localDigits, missingForCompany, listMissing } from "/js/contacts.js";
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
@@ -82,15 +89,15 @@
   fillForm(company);
   renderPreview(company);
 
-  if (new URLSearchParams(location.search).has("onboarding")) {
-    toast("Welcome. Add your company details, then post your first event.", "info", 6000);
-  }
-
   function fillForm(c) {
     $("companyName").value = c.companyName || "";
     readIndustry = selectWithOther($("industry"), $("industry-other"), INDUSTRIES.filter((i) => i !== "Other"), c.industry || "");
     readCity = selectWithOther($("location"), $("location-other"), CITIES, c.location || "");
     $("contact").value = c.contact || "";
+    $("phone").value = localDigits(c.phone || "");
+    const missing = missingForCompany(c);
+    $("profile-needed").classList.toggle("hidden", missing.length === 0);
+    $("profile-needed").textContent = missing.length ? `Add ${listMissing(missing)} to start posting events.` : "";
     $("description").value = c.description || "";
     $("logo-preview").innerHTML = avatarHTML(c.logoURL, c.companyName, "lg");
   }
@@ -111,7 +118,13 @@
 
   $("profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const phone = normalizePhone($("phone").value);
     if (!$("companyName").value.trim() || !readCity()) return toast("Company name and city are required.", "error");
+    if (!$("logo-input").files[0] && !company.logoURL) return toast("Add your company logo. Promoters trust posts with a logo.", "error");
+    if (!phone) {
+      $("phone").focus();
+      return toast("Enter a 10-digit mobile number, like 98200 12345.", "error");
+    }
     const btn = $("save-btn");
     btn.disabled = true; btn.textContent = "Saving…";
     try {
@@ -122,6 +135,7 @@
         industry: readIndustry(),
         location: readCity(),
         contact: $("contact").value.trim(),
+        phone,
         description: $("description").value.trim(),
         logoURL,
       };

@@ -36,6 +36,7 @@
   import { icon } from "/js/icons.js";
   import { mountRatingForm } from "/js/rating-form.js";
   import { getPayout, grantPayoutAccess, payoutSummaryHTML } from "/js/payouts.js";
+  import { getPromoterPhone, phoneLinkHTML } from "/js/contacts.js";
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
@@ -185,8 +186,9 @@
       </div>`;
   }
 
-  // promoterId -> payout details (null if they haven't added any)
+  // promoterId -> payout details / phone (null if they haven't added any)
   const payouts = {};
+  const phones = {};
   function loadPayouts(list) {
     list.filter((b) => b.status !== "cancelled" && !(b.promoterId in payouts)).forEach(async (b) => {
       payouts[b.promoterId] = undefined;
@@ -201,6 +203,7 @@
           payouts[b.promoterId] = null;
         }
       }
+      phones[b.promoterId] = await getPromoterPhone(b.promoterId).catch(() => null);
       render();
     });
   }
@@ -214,6 +217,7 @@
         <div class="list-row-main">
           <div class="list-row-title">${escapeHTML(b.promoterName)}</div>
           <div class="list-row-sub">Code <code>${escapeHTML(b.bookingCode)}</code></div>
+          ${phones[b.promoterId] ? `<div class="list-row-sub">Phone: ${phoneLinkHTML(phones[b.promoterId])}</div>` : ""}
           ${payouts[b.promoterId] !== undefined ? `<div class="list-row-sub payout-line">Pay to: ${payoutSummaryHTML(payouts[b.promoterId])}</div>` : ""}
           ${checkIn ? `<div class="checkin-arrived">Arrived ${fmtTimestamp(checkIn.timestamp)}${photo ? ` · <a class="link" href="${photo}" target="_blank" rel="noopener">photo</a>` : ""}</div>` : ""}
         </div>

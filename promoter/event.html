@@ -35,6 +35,8 @@
   import { toast, confirmDialog, escapeHTML, safeUrl, statusPill, fmtEventCountdown, eventStartDate, fmtTimestamp, fmtMoney } from "/js/ui.js";
   import { icon } from "/js/icons.js";
   import { mountRatingForm } from "/js/rating-form.js";
+  import { getCompany } from "/js/db.js";
+  import { phoneLinkHTML } from "/js/contacts.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
@@ -51,8 +53,9 @@
   async function render() {
     const booking = bookingId ? await getBooking(bookingId) : null;
     if (!booking || booking.promoterId !== user.uid) return notFound();
-    const [event, checkIns, alreadyRated] = await Promise.all([
+    const [event, company, checkIns, alreadyRated] = await Promise.all([
       getEvent(booking.eventId),
+      getCompany(booking.companyId).catch(() => null),
       listCheckInsForBooking(bookingId, user.uid),
       booking.status === "completed" ? hasRated(bookingId, "promoter") : false,
     ]);
@@ -74,7 +77,10 @@
           <dt>Booking code</dt><dd><code>${escapeHTML(booking.bookingCode)}</code></dd>
           <dt>Payment</dt><dd>${fmtMoney(booking.paymentAmount)} · ${statusPill(booking.paymentStatus)}</dd>
         </dl>
-        ${event?.companyId ? `<p class="mt-16 text-sm"><a class="link" href="/shared/company-profile?id=${encodeURIComponent(event.companyId)}">View company profile</a></p>` : ""}
+        <p class="mt-16 text-sm">
+          ${company?.phone ? `Call ${escapeHTML(company.companyName || "the company")}: ${phoneLinkHTML(company.phone)} · ` : ""}
+          <a class="link" href="/shared/company-profile?id=${encodeURIComponent(booking.companyId)}">View company profile</a>
+        </p>
         ${upcoming ? `
         <div class="event-actions">
           ${booking.status === "booked" ? `<button class="btn btn-secondary" id="otw-btn">I'm on my way</button>` : ""}

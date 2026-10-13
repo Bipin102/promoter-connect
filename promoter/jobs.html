@@ -70,7 +70,8 @@
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
   import { bookPosition, applyToEvent, promoterApplicationStatuses, BOOKING_ERRORS } from "/js/booking.js";
   import { jobCardHTML, eventDetailsHTML, tickCountdowns } from "/js/render.js";
-  import { toast, openModal, escapeHTML, skeletonCards, fmtDate, fmtTimeRange, fmtMoney } from "/js/ui.js";
+  import { toast, openModal, confirmDialog, escapeHTML, skeletonCards, fmtDate, fmtTimeRange, fmtMoney } from "/js/ui.js";
+  import { missingForPromoter, listMissing } from "/js/contacts.js";
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
 
   // Anyone can browse gigs; booking or applying needs a promoter account.
@@ -144,18 +145,20 @@
     else takeAction(btn, event);
   });
 
-  function profileIncomplete() {
+  async function profileIncomplete() {
     if (!promoter) {
       location.href = "/auth/signup?role=promoter";
       return true;
     }
-    if (promoter.city && promoter.fullName) return false;
-    toast("Add your name and city to your profile before applying.", "error");
+    const missing = missingForPromoter(promoter);
+    if (!missing.length) return false;
+    const go = await confirmDialog(`Companies need to see who's coming. Add ${listMissing(missing)} to your profile, then you can apply and book.`, { confirmLabel: "Complete profile" });
+    if (go) location.href = "/promoter/profile";
     return true;
   }
 
   async function takeAction(btn, event) {
-    if (profileIncomplete()) return;
+    if (await profileIncomplete()) return;
     const isUrgent = event.hiringType === "urgent";
     const label = btn.textContent;
     btn.disabled = true;

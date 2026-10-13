@@ -27,6 +27,7 @@
   import { getCompany } from "/js/db.js";
   import { listRatingsFor, CATEGORY_LABELS } from "/js/ratings.js";
   import { stars, badgeList, escapeHTML, avatarHTML, fmtTimestamp } from "/js/ui.js";
+  import { phoneLinkHTML } from "/js/contacts.js";
 
   const { profile } = await requireAuth();
   mountLayout({ role: profile.role });
@@ -60,7 +61,8 @@
           <p class="text-dim" style="white-space:pre-line">${escapeHTML(company.description || "No description yet.")}</p>
           <dl class="detail-list mt-16">
             ${company.industry ? `<dt>Industry</dt><dd>${escapeHTML(company.industry)}</dd>` : ""}
-            ${company.contact ? `<dt>Contact</dt><dd>${escapeHTML(company.contact)}</dd>` : ""}
+            ${company.phone ? `<dt>Phone</dt><dd>${phoneLinkHTML(company.phone)}</dd>` : ""}
+            ${company.contact ? `<dt>Email / web</dt><dd>${escapeHTML(company.contact)}</dd>` : ""}
           </dl>
         </div>
 

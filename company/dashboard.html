@@ -57,6 +57,7 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { pendingApplicationCounts } from "/js/booking.js";
+  import { missingForCompany, listMissing } from "/js/contacts.js";
   import { hasEnded } from "/js/render.js";
   import { mountInviteCard } from "/js/referrals.js";
   import { getCompany } from "/js/db.js";
@@ -70,6 +71,18 @@
   const events = await Promise.all(rawEvents.map(reconcileUrgentWindow));
 
   if (company.companyName) document.getElementById("greeting").textContent = company.companyName;
+  const missingProfile = missingForCompany(company);
+  if (missingProfile.length) {
+    document.getElementById("main").querySelector(".page-header").insertAdjacentHTML("afterend", `
+      <div class="action-banner mb-24" role="status">
+        <div>
+          <strong>Your profile isn't finished</strong>
+          <p>Add ${listMissing(missingProfile)} to start posting events.</p>
+        </div>
+        <a class="btn btn-primary" href="/company/profile">Complete profile</a>
+      </div>`);
+  }
+
 
   const active = events.filter((e) => ["open", "fulfilled", "window_ended"].includes(e.status));
   const urgentLive = events.filter((e) => e.hiringType === "urgent" && e.status === "open");

@@ -69,6 +69,7 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { mountInviteCard } from "/js/referrals.js";
+  import { missingForPromoter, listMissing } from "/js/contacts.js";
   import { getPromoter } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
   import { listPromoterBookings, promoterApplicationStatuses } from "/js/booking.js";
@@ -85,6 +86,18 @@
   const [promoter, openEvents, bookings, ratings, applied] = await Promise.all([
     getPromoter(user.uid), listOpenEvents(), listPromoterBookings(user.uid), listRatingsFor(user.uid), promoterApplicationStatuses(user.uid),
   ]);
+
+  const missingProfile = missingForPromoter(promoter);
+  if (missingProfile.length) {
+    document.getElementById("main").querySelector(".page-header").insertAdjacentHTML("afterend", `
+      <div class="action-banner mb-24" role="status">
+        <div>
+          <strong>Your profile isn't finished</strong>
+          <p>Add ${listMissing(missingProfile)} to start applying for and booking gigs.</p>
+        </div>
+        <a class="btn btn-primary" href="/promoter/profile">Complete profile</a>
+      </div>`);
+  }
 
   const firstName = promoter.fullName?.split(" ")[0];
   if (firstName) document.getElementById("greeting").textContent = `Hi, ${firstName}`;

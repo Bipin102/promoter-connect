@@ -30,8 +30,9 @@
 
   <div class="two-col">
     <form class="card" id="profile-form" novalidate>
+      <p class="action-banner mb-24 hidden" id="profile-needed" role="status" style="display:block"></p>
       <div class="field">
-        <label for="photo-input">Photo</label>
+        <label for="photo-input">Photo <span class="required" aria-hidden="true">*</span></label>
         <div class="flex gap-16" style="align-items:center">
           <div id="photo-preview"></div>
           <input type="file" id="photo-input" accept="image/*" />
@@ -39,12 +40,17 @@
       </div>
 
       <div class="field-row">
-        <div class="field"><label for="fullName">Full name</label><input type="text" id="fullName" autocomplete="name" required /></div>
+        <div class="field"><label for="fullName">Full name <span class="required" aria-hidden="true">*</span></label><input type="text" id="fullName" autocomplete="name" required /></div>
         <div class="field">
-          <label for="city">City</label>
+          <label for="city">City <span class="required" aria-hidden="true">*</span></label>
           <select id="city" required></select>
           <input type="text" id="city-other" class="input hidden mt-8" placeholder="Type your city" aria-label="Your city" />
         </div>
+      </div>
+      <div class="field">
+        <label for="phone">Phone number <span class="required" aria-hidden="true">*</span></label>
+        <div class="phone-input"><span>+91</span><input type="tel" id="phone" inputmode="numeric" autocomplete="tel-national" placeholder="98200 12345" maxlength="17" required /></div>
+        <p class="field-hint">Only companies that book you can see this, so they can reach you on the day.</p>
       </div>
       <div class="field-row">
         <div class="field"><label for="age">Age <span class="optional">(optional)</span></label><input type="number" id="age" min="16" max="80" inputmode="numeric" /></div>
@@ -128,6 +134,7 @@
   import { toast, stars, badgeList, escapeHTML, avatarHTML, safeUrl, confirmDialog, chipPicker, selectWithOther } from "/js/ui.js";
   import { CITIES, SKILLS, LANGUAGES, EVENT_TYPES, EXPERIENCE } from "/js/options.js";
   import { getPayout, savePayout, validatePayout } from "/js/payouts.js";
+  import { normalizePhone, localDigits, getPromoterPhone, savePromoterPhone, missingForPromoter, listMissing } from "/js/contacts.js";
   import { getCurrentLocation } from "/js/geo.js";
   import { icon } from "/js/icons.js";
 
@@ -140,13 +147,17 @@
   let readSkills, readLanguages, readCategories, readCity;
   fillForm(promoter);
   initPayout();
+  getPromoterPhone(user.uid).then((phone) => { if (phone) $("phone").value = localDigits(phone); }).catch(() => {});
+  showWhatsMissing();
+
+  function showWhatsMissing() {
+    const missing = missingForPromoter(promoter);
+    $("profile-needed").classList.toggle("hidden", missing.length === 0);
+    $("profile-needed").textContent = missing.length ? `Add ${listMissing(missing)} to start applying for gigs.` : "";
+  }
   renderPreview(promoter);
   renderLocationStatus(promoter);
   loadGallery();
-
-  if (new URLSearchParams(location.search).has("onboarding")) {
-    toast("Welcome. Fill in your profile so companies can find you.", "info", 6000);
-  }
 
   function renderLocationStatus(p) {
     const updated = p.location?.updatedAt?.toDate?.() || (p.location?.updatedAt instanceof Date ? p.location.updatedAt : null);
@@ -257,8 +268,12 @@
 
   $("profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!$("fullName").value.trim() || !readCity()) {
-      return toast("Name and city are required.", "error");
+    const phone = normalizePhone($("phone").value);
+    if (!$("fullName").value.trim() || !readCity()) return toast("Name and city are required.", "error");
+    if (!$("photo-input").files[0] && !promoter.photoURL) return toast("Add a photo of yourself. Companies want to see who's coming.", "error");
+    if (!phone) {
+      $("phone").focus();
+      return toast("Enter a 10-digit mobile number, like 98200 12345.", "error");
     }
     const btn = $("save-btn");
     btn.disabled = true; btn.textContent = "Saving…";
@@ -278,9 +293,12 @@
         categories: readCategories(),
         availability: $("availability").value,
         photoURL,
+        hasPhone: true,
       };
+      await savePromoterPhone(user.uid, phone);
       await updatePromoter(user.uid, data);
       promoter = { ...promoter, ...data };
+      showWhatsMissing();
       $("photo-input").value = "";
       fillForm(promoter);
       renderPreview(promoter);

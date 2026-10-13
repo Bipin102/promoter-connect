@@ -25,6 +25,11 @@
     </div>
   </div>
 
+  <div class="action-banner mb-24 hidden" id="profile-needed" role="status">
+    <div><strong>Finish your company profile first</strong><p id="profile-needed-text"></p></div>
+    <a class="btn btn-primary" href="/company/profile">Complete profile</a>
+  </div>
+
   <form id="event-form" novalidate>
     <div class="card mb-24">
       <fieldset style="border:0;padding:0;margin:0">
@@ -102,11 +107,19 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { postEvent } from "/js/events.js";
+  import { getCompany } from "/js/db.js";
+  import { missingForCompany, listMissing } from "/js/contacts.js";
   import { toast } from "/js/ui.js";
   import { getCurrentLocation } from "/js/geo.js";
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
+  const missing = missingForCompany(await getCompany(user.uid) || {});
+  if (missing.length) {
+    document.getElementById("profile-needed-text").textContent = `Add ${listMissing(missing)} so promoters know who they're working for. Then you can post.`;
+    document.getElementById("profile-needed").classList.remove("hidden");
+    document.querySelectorAll("#event-form input, #event-form select, #event-form textarea, #event-form button").forEach((el) => { el.disabled = true; });
+  }
   const $ = (id) => document.getElementById(id);
 
   $("date").min = new Date().toLocaleDateString("en-CA");

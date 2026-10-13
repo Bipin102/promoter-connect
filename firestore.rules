@@ -34,7 +34,8 @@ service cloud.firestore {
     }
     function ownerProfileEdit(uid) {
       return isOwner(uid) && !changedKeys().hasAny(protectedProfileFields()) &&
-        shortText('fullName', 100) && shortText('companyName', 120) && shortText('description', 2000);
+        shortText('fullName', 100) && shortText('companyName', 120) && shortText('description', 2000) &&
+        (!('phone' in data()) || data().phone == '' || data().phone.matches('^\\+91[6-9][0-9]{9}$'));
     }
 
     // A rating's average only changes together with the brand-new rating doc for this profile.
@@ -289,6 +290,15 @@ service cloud.firestore {
         data().method in ['upi', 'bank', 'cash'] &&
         shortText('upiId', 100) && shortText('accountName', 100) &&
         shortText('accountNumber', 20) && shortText('ifsc', 11);
+    }
+
+    // A promoter's phone number: same audience as payment details, plus admins.
+    match /contactDetails/{uid} {
+      allow read: if isOwner(uid) || isAdmin() ||
+        (isSignedIn() && exists(docPath('payoutAccess', uid + '_' + request.auth.uid)));
+      allow write: if isOwner(uid) &&
+        data().keys().hasOnly(['phone', 'updatedAt']) &&
+        data().phone is string && data().phone.matches('^\\+91[6-9][0-9]{9}$');
     }
 
     match /payoutAccess/{id} {
