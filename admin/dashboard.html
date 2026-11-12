@@ -31,6 +31,22 @@
   </div>
 
   <div id="admin-root"><div class="loading-state"><div class="spinner"></div></div></div>
+
+  <section class="section hidden" id="showcase-admin">
+    <div class="section-head"><h2>Past events gallery</h2><span class="text-dim text-sm">Shown on the homepage and dashboards</span></div>
+    <form class="card mb-24" id="showcase-form" novalidate>
+      <div class="field-row">
+        <div class="field"><label for="sc-photo">Photo</label><input type="file" id="sc-photo" accept="image/*" /></div>
+        <div class="field"><label for="sc-brand">Brand</label><input type="text" id="sc-brand" maxlength="60" placeholder="e.g. Cadbury" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="sc-event">Event</label><input type="text" id="sc-event" maxlength="80" placeholder="e.g. Diwali sampling drive" /></div>
+        <div class="field"><label for="sc-city">City <span class="optional">(optional)</span></label><input type="text" id="sc-city" maxlength="40" placeholder="e.g. Mumbai" /></div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="sc-save">Add to gallery</button>
+    </form>
+    <div id="showcase-list"></div>
+  </section>
 </main>
 
 <div id="pc-footer"></div>
@@ -279,7 +295,56 @@
     resizeTimer = setTimeout(() => { if (users.length && document.getElementById("growth-chart")) renderChart(); }, 150);
   });
 
+  async function initShowcaseAdmin() {
+    const { listShowcase, addShowcaseItem, removeShowcaseItem } = await import("/js/showcase.js");
+    const { toast, confirmDialog, safeUrl } = await import("/js/ui.js");
+    const $ = (id) => document.getElementById(id);
+    $("showcase-admin").classList.remove("hidden");
+
+    async function refresh() {
+      const items = await listShowcase(60);
+      $("showcase-list").innerHTML = items.length
+        ? `<div class="card admin-table-card"><div class="admin-table-wrap"><table class="admin-table">
+            <thead><tr><th>Photo</th><th>Brand</th><th>Event</th><th>City</th><th></th></tr></thead>
+            <tbody>${items.map((i) => `<tr>
+              <td><img src="${safeUrl(i.imageURL)}" alt="" style="width:72px;height:54px;object-fit:cover;border-radius:6px" loading="lazy" /></td>
+              <td>${escapeHTML(i.brand)}</td><td>${escapeHTML(i.eventName)}</td><td>${escapeHTML(i.city || "—")}</td>
+              <td><button class="btn btn-danger btn-sm" data-remove="${escapeHTML(i.id)}">Remove</button></td>
+            </tr>`).join("")}</tbody></table></div></div>`
+        : `<div class="empty-state boxed">No photos yet. The gallery stays hidden on the site until you add one.</div>`;
+      $("showcase-list").querySelectorAll("[data-remove]").forEach((btn) => btn.addEventListener("click", async () => {
+        if (!(await confirmDialog("Remove this photo from the gallery?", { confirmLabel: "Remove", danger: true }))) return;
+        await removeShowcaseItem(btn.dataset.remove);
+        toast("Removed.");
+        refresh();
+      }));
+    }
+
+    $("showcase-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = $("sc-photo").files[0];
+      const brand = $("sc-brand").value.trim();
+      const eventName = $("sc-event").value.trim();
+      if (!file) return toast("Choose a photo.", "error");
+      if (!brand || !eventName) return toast("Add the brand and the event name.", "error");
+      const btn = $("sc-save");
+      btn.disabled = true; btn.textContent = "Uploading…";
+      try {
+        await addShowcaseItem({ file, brand, eventName, city: $("sc-city").value.trim() });
+        e.target.reset();
+        toast("Added to the gallery.", "success");
+        refresh();
+      } catch (err) {
+        toast(err.message || "Couldn't add the photo. Please try again.", "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "Add to gallery";
+      }
+    });
+    refresh();
+  }
+
   if (isAdmin) {
+    initShowcaseAdmin();
     document.getElementById("refresh-btn").addEventListener("click", load);
     document.getElementById("export-btn").addEventListener("click", exportCSV);
     try { await load(); }

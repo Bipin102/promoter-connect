@@ -311,6 +311,20 @@ service cloud.firestore {
         payoutBookingMatches(get(docPath('bookings', data().bookingId)).data);
     }
 
+    // ---------- past events gallery ----------
+
+    // Public, so the homepage can show it; only admins add or remove photos.
+    match /showcase/{id} {
+      allow read: if true;
+      allow create: if isAdmin() &&
+        data().keys().hasOnly(['imageURL', 'brand', 'eventName', 'city', 'createdAt']) &&
+        data().imageURL is string && data().imageURL.matches('^https://.*') &&
+        data().brand is string && data().brand.size() > 0 && data().brand.size() <= 60 &&
+        data().eventName is string && data().eventName.size() > 0 && data().eventName.size() <= 80 &&
+        shortText('city', 40);
+      allow delete: if isAdmin();
+    }
+
     // ---------- notifications ----------
 
     match /notifications/{id} {

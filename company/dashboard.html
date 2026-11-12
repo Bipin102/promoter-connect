@@ -45,6 +45,11 @@
     <div id="upcoming"><div class="loading-state"><div class="spinner"></div></div></div>
   </section>
 
+  <section class="section hidden" id="showcase-section">
+    <div class="section-head"><h2>Events we've run</h2></div>
+    <div id="showcase"></div>
+  </section>
+
   <section class="section">
     <div class="section-head"><h2>Invite friends</h2></div>
     <div class="card" id="invite-card"></div>
@@ -60,6 +65,7 @@
   import { missingForCompany, listMissing } from "/js/contacts.js";
   import { hasEnded } from "/js/render.js";
   import { mountInviteCard } from "/js/referrals.js";
+  import { mountShowcase } from "/js/showcase.js";
   import { getCompany } from "/js/db.js";
   import { listCompanyEvents, reconcileUrgentWindow } from "/js/events.js";
   import { fmtDate, fmtCountdown, escapeHTML, statusPill } from "/js/ui.js";
@@ -67,6 +73,7 @@
   mountLayout({ role: "company" });
   const { user, profile } = await requireAuth("company");
   mountInviteCard(document.getElementById("invite-card"), { uid: user.uid, name: profile.displayName, code: profile.referralCode });
+  mountShowcase(document.getElementById("showcase"), document.getElementById("showcase-section"), { layout: "strip" });
   const [company, rawEvents, pendingApps] = await Promise.all([getCompany(user.uid), listCompanyEvents(user.uid), pendingApplicationCounts(user.uid)]);
   const events = await Promise.all(rawEvents.map(reconcileUrgentWindow));
 

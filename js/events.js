@@ -3,6 +3,7 @@ import {
   collection, doc, getDoc, getDocs, updateDoc, query, where, onSnapshot, runTransaction, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { pushNotification } from "./notifications.js";
+import { hasEnded } from "./render.js";
 
 export const URGENT_WINDOW_MS = 60 * 60 * 1000;
 
@@ -102,7 +103,8 @@ export async function listOpenEvents(filters = {}) {
       (e.location || "").toLowerCase().includes(kw)
     );
   }
-  return list;
+  // A gig whose day is over isn't open any more, whatever its status says.
+  return list.filter((e) => !hasEnded(e));
 }
 
 export async function listCompanyEvents(companyId) {

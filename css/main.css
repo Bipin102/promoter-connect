@@ -374,3 +374,9 @@ html:has(body.has-bottom-nav) { scroll-padding-bottom: 88px; }
 .phone-input:focus-within { border-color: var(--accent); box-shadow: var(--focus-ring); }
 .phone-input span { display: flex; align-items: center; padding: 0 10px 0 12px; color: var(--text-dim); font-size: 14px; border-right: 1px solid var(--border); background: var(--surface-2); }
 .field .phone-input input { border: 0; box-shadow: none; border-radius: 0; background: transparent; }
+
+.lp-showcase { padding: 64px 0; border-bottom: 1px solid var(--border); }
+.lp-section-title { font-size: clamp(22px, 2.6vw, 28px); font-weight: 700; }
+.lp-section-sub { color: var(--text-dim); font-size: 15px; margin: 6px 0 24px; }
+.lp-brands { margin-top: 24px; }
+.lp-brands:not(:empty)::before { content: "Brands we've worked with"; display: block; font-size: 13px; font-weight: 600; color: var(--text-faint); margin-bottom: 10px; }

@@ -57,6 +57,11 @@
     <div class="card" id="ratings-preview"></div>
   </section>
 
+  <section class="section hidden" id="showcase-section">
+    <div class="section-head"><h2>Events we've run</h2></div>
+    <div id="showcase"></div>
+  </section>
+
   <section class="section">
     <div class="section-head"><h2>Invite friends</h2></div>
     <div class="card" id="invite-card"></div>
@@ -69,6 +74,7 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { mountInviteCard } from "/js/referrals.js";
+  import { mountShowcase } from "/js/showcase.js";
   import { missingForPromoter, listMissing } from "/js/contacts.js";
   import { getPromoter } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
@@ -82,6 +88,7 @@
   mountLayout({ role: "promoter" });
   const { user, profile } = await requireAuth("promoter");
   mountInviteCard(document.getElementById("invite-card"), { uid: user.uid, name: profile.displayName, code: profile.referralCode });
+  mountShowcase(document.getElementById("showcase"), document.getElementById("showcase-section"), { layout: "strip" });
 
   const [promoter, openEvents, bookings, ratings, applied] = await Promise.all([
     getPromoter(user.uid), listOpenEvents(), listPromoterBookings(user.uid), listRatingsFor(user.uid), promoterApplicationStatuses(user.uid),

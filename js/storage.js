@@ -16,15 +16,39 @@ if (!isSupabaseConfigured) {
   });
 }
 
+/**
+ * Scales a photo down to at most maxSize px on its longest side and re-encodes
+ * it as JPEG, so a 6 MB phone photo uploads as roughly 200 KB. Falls back to
+ * the original if the browser can't decode it (some HEIC files, for example).
+ */
+export async function shrinkImage(file, maxSize = 1600) {
+  if (file.type === "image/gif" || file.type === "image/svg+xml") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 500 * 1024) return file;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+    return blob && blob.size < file.size ? blob : file;
+  } catch {
+    return file;
+  }
+}
+
 /** Uploads an image to Supabase Storage and returns its public URL. */
-export async function uploadImage(path, file) {
+export async function uploadImage(path, file, { maxSize = 1600 } = {}) {
   if (!file) throw new Error("No file provided");
   if (!file.type.startsWith("image/")) throw new Error("Please choose an image file.");
-  if (file.size > 8 * 1024 * 1024) throw new Error("That image is over 8 MB. Please pick a smaller one.");
+  if (file.size > 25 * 1024 * 1024) throw new Error("That image is over 25 MB. Please pick a smaller one.");
 
-  const { error } = await supabase.storage.from(supabaseConfig.bucket).upload(path, file, {
+  const upload = await shrinkImage(file, maxSize);
+  if (upload.size > 8 * 1024 * 1024) throw new Error("That image is too large. Please pick a smaller one.");
+  const { error } = await supabase.storage.from(supabaseConfig.bucket).upload(path, upload, {
     upsert: false,
-    contentType: file.type,
+    contentType: upload.type || file.type,
   });
   if (error) throw new Error("The upload didn't go through. Please try again.");
 
