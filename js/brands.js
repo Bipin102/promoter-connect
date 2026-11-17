@@ -3,7 +3,7 @@
 // A brand without a logo file shows its name instead.
 export const BRANDS = [
   { name: "Aditya Birla Group", logo: "/assets/brands/aditya-birla.png" },
-  { name: "Flipkart", logo: "/assets/brands/flipkart.png" },
+  { name: "Flipkart Minutes", logo: "/assets/brands/flipkart-minutes.png" },
   { name: "Birla Opus", logo: "/assets/brands/birla-opus.png" },
   { name: "Maaza", logo: "/assets/brands/maaza.png" },
   { name: "Palmonas", logo: "/assets/brands/palmonas.png" },
