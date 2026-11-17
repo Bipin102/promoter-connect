@@ -1,4 +1,4 @@
-import { escapeHTML, fmtDate, fmtTimeRange, fmtMoney, fmtPaymentType, fmtEventCountdown, eventStartDate, statusPill } from "./ui.js";
+import { escapeHTML, fmtDate, fmtTimeRange, fmtMoney, fmtPaymentType, fmtEventCountdown, eventStartDate, statusPill, stars, avatarHTML } from "./ui.js";
 import { icon } from "./icons.js";
 
 export const ACTIVE_BOOKING_STATUSES = ["booked", "on_the_way", "checked_in", "active"];
@@ -46,6 +46,20 @@ export function eventMetaHTML(ev) {
 
 const APPLICATION_LABELS = { pending: "Applied, waiting", accepted: "Accepted", rejected: "Not selected" };
 
+/** "Acme Activations ★★★★☆ 4.2 (12)" with a link to the company's reviews. */
+export function companyLineHTML(company) {
+  if (!company) return "";
+  const rating = company.ratingCount
+    ? stars(company.ratingAvg || 0, company.ratingCount)
+    : `<span class="company-new">No ratings yet</span>`;
+  return `
+    <a class="company-line" href="/shared/company-profile?id=${encodeURIComponent(company.id)}" title="See reviews of ${escapeHTML(company.companyName || "this company")}">
+      ${avatarHTML(company.logoURL, company.companyName, "xs")}
+      <span class="company-line-name">${escapeHTML(company.companyName || "Company")}</span>
+      ${rating}
+    </a>`;
+}
+
 export function jobCardHTML(ev, { showActions = true } = {}) {
   const isUrgent = ev.hiringType === "urgent";
   const remaining = Math.max(0, ev.positionsRequired - (ev.positionsFilled || 0));
@@ -58,6 +72,7 @@ export function jobCardHTML(ev, { showActions = true } = {}) {
       <div>
         ${subtitle ? `<div class="job-card-brand">${subtitle}</div>` : ""}
         <h3 class="job-card-title">${escapeHTML(ev.eventName)}</h3>
+        ${companyLineHTML(ev._company)}
       </div>
       ${isUrgent ? `<span class="badge badge-urgent">Urgent</span>` : ""}
     </div>
@@ -95,6 +110,7 @@ export function eventDetailsHTML(ev) {
   ].filter(([, value]) => value);
 
   return `
+    ${ev._company ? `<div class="mb-16">${companyLineHTML(ev._company)}</div>` : ""}
     ${eventMetaHTML(ev)}
     ${ev.description ? `<p class="mt-16" style="white-space:pre-line">${escapeHTML(ev.description)}</p>` : ""}
     <dl class="detail-list mt-16">
@@ -126,7 +142,7 @@ export function bookingRowHTML(b) {
         ${upcoming && start ? `<div class="countdown" data-event-start="${start}"></div>` : ""}
       </div>
       <div class="list-row-side">
-        ${statusPill(b._ended ? "ended" : b.status)}
+        ${b._needsRating ? `<span class="badge badge-accent">Rate company</span>` : statusPill(b._ended ? "ended" : b.status)}
         <span>${fmtMoney(b.paymentAmount)}</span>
       </div>
     </a>`;

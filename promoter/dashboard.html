@@ -76,10 +76,10 @@
   import { mountInviteCard } from "/js/referrals.js";
   import { mountShowcase } from "/js/showcase.js";
   import { missingForPromoter, listMissing } from "/js/contacts.js";
-  import { getPromoter } from "/js/db.js";
+  import { getPromoter, attachCompanies } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
   import { listPromoterBookings, promoterApplicationStatuses } from "/js/booking.js";
-  import { listRatingsFor } from "/js/ratings.js";
+  import { listRatingsFor, bookingsRatedBy } from "/js/ratings.js";
   import { jobCardHTML, tickCountdowns, bookingRowHTML, tickEventStarts, groupBookings } from "/js/render.js";
   import { eventStartDate } from "/js/ui.js";
   import { stars, escapeHTML, fmtMoney } from "/js/ui.js";
@@ -116,6 +116,7 @@
     .sort((a, b) => (b.hiringType === "urgent") - (a.hiringType === "urgent")
       || (eventStartDate(a.date, a.startTime) || 0) - (eventStartDate(b.date, b.startTime) || 0));
   open.forEach((e) => { e._application = applied[e.id]; });
+  await attachCompanies(open.slice(0, 6));
   if (promoter.location?.lat != null) {
     open.forEach((e) => {
       if (!e.locationGeo) return;
@@ -125,6 +126,18 @@
   }
 
   const { upcoming } = groupBookings(bookings);
+  const rated = await bookingsRatedBy(user.uid).catch(() => new Set());
+  const toRate = bookings.filter((b) => b.status === "completed" && !rated.has(b.id));
+  if (toRate.length) {
+    document.getElementById("main").querySelector(".page-header").insertAdjacentHTML("afterend", `
+      <div class="action-banner mb-24" role="status">
+        <div>
+          <strong>How was ${toRate.length === 1 ? escapeHTML(toRate[0].eventName) : `your last ${toRate.length} events`}?</strong>
+          <p>Rate the ${toRate.length === 1 ? "company" : "companies"} so other promoters know who treats people well and pays on time.</p>
+        </div>
+        <a class="btn btn-primary" href="/promoter/event?id=${encodeURIComponent(toRate[0].id)}">Rate ${toRate.length === 1 ? "now" : "the first one"}</a>
+      </div>`);
+  }
   const earned = bookings.filter((b) => b.status === "completed").reduce((sum, b) => sum + (b.paymentAmount || 0), 0);
 
   document.getElementById("stats").innerHTML = `
@@ -143,7 +156,7 @@
       card.classList.add("clickable");
       card.setAttribute("role", "link");
       card.tabIndex = 0;
-      card.addEventListener("click", () => { location.href = href; });
+      card.addEventListener("click", (ev) => { if (!ev.target.closest("a")) location.href = href; });
       card.addEventListener("keydown", (ev) => { if (ev.key === "Enter") location.href = href; });
       if (event._application) card.insertAdjacentHTML("beforeend", `<div class="text-sm text-dim">You've applied</div>`);
     });

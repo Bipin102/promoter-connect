@@ -66,7 +66,7 @@
 <script type="module">
   import { getSession } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
-  import { getPromoter } from "/js/db.js";
+  import { getPromoter, attachCompanies } from "/js/db.js";
   import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
   import { bookPosition, applyToEvent, promoterApplicationStatuses, BOOKING_ERRORS } from "/js/booking.js";
   import { jobCardHTML, eventDetailsHTML, tickCountdowns } from "/js/render.js";
@@ -110,6 +110,8 @@
         minPayment: $("f-payment").value,
       });
       list = await Promise.all(list.map(reconcileUrgentWindow));
+      // Company names and ratings need a login to read; visitors see the gigs without them.
+      if (session) await attachCompanies(list);
       const applied = promoter ? await promoterApplicationStatuses(promoter.id) : {};
       list.forEach((e) => { e._application = applied[e.id]; });
     } catch {

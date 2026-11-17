@@ -76,6 +76,12 @@ export async function hasRated(bookingId, fromRole) {
   return s.exists();
 }
 
+/** Booking ids this user has already rated, as a Set. */
+export async function bookingsRatedBy(fromId) {
+  const snap = await getDocs(query(collection(db, "ratings"), where("fromId", "==", fromId)));
+  return new Set(snap.docs.map((d) => d.data().bookingId));
+}
+
 export async function listRatingsFor(toId) {
   // Sorted client-side to avoid needing a composite index.
   const snap = await getDocs(query(collection(db, "ratings"), where("toId", "==", toId)));

@@ -13,6 +13,20 @@ export async function getCompany(uid) {
   return s.exists() ? { id: s.id, ...s.data() } : null;
 }
 
+/** Company profiles for a set of ids (unknown or unreadable ones are skipped). */
+export async function getCompaniesById(ids) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const companies = await Promise.all(unique.map((id) => getCompany(id).catch(() => null)));
+  return Object.fromEntries(companies.filter(Boolean).map((c) => [c.id, c]));
+}
+
+/** Attaches each gig's company (name, logo, rating) as e._company. Signed-in only; visitors just don't see it. */
+export async function attachCompanies(events) {
+  const companies = await getCompaniesById(events.map((e) => e.companyId)).catch(() => ({}));
+  events.forEach((e) => { e._company = companies[e.companyId] || null; });
+  return events;
+}
+
 export async function updatePromoter(uid, data) {
   await updateDoc(doc(db, "promoters", uid), { ...data, updatedAt: serverTimestamp() });
 }

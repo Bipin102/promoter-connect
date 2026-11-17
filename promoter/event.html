@@ -72,7 +72,7 @@
           ${statusPill(ended ? "ended" : booking.status)}
         </div>
         ${ended ? `<p class="action-banner mb-16" style="display:block">This event is over. It moves to Completed for good once the company closes it, and then you can rate them.</p>` : ""}
-        ${eventDetailsHTML(event || booking)}
+        ${eventDetailsHTML({ ...(event || booking), _company: company })}
         <dl class="detail-list mt-16">
           <dt>Booking code</dt><dd><code>${escapeHTML(booking.bookingCode)}</code></dd>
           <dt>Payment</dt><dd>${fmtMoney(booking.paymentAmount)} · ${statusPill(booking.paymentStatus)}</dd>

@@ -40,12 +40,14 @@
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { listPromoterBookings } from "/js/booking.js";
+  import { bookingsRatedBy } from "/js/ratings.js";
   import { bookingRowHTML, tickEventStarts, groupBookings } from "/js/render.js";
   import { initTabs } from "/js/ui.js";
 
   mountLayout({ role: "promoter" });
   const { user } = await requireAuth("promoter");
-  const bookings = await listPromoterBookings(user.uid);
+  const [bookings, rated] = await Promise.all([listPromoterBookings(user.uid), bookingsRatedBy(user.uid)]);
+  bookings.forEach((b) => { b._needsRating = b.status === "completed" && !rated.has(b.id); });
 
   const groups = groupBookings(bookings);
   const emptyText = {
