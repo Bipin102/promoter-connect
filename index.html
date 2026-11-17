@@ -57,12 +57,18 @@
     </div>
   </section>
 
+  <section class="lp-brands-section" aria-labelledby="brands-title">
+    <div class="container">
+      <h2 class="lp-brands-title" id="brands-title">Brands we've worked with</h2>
+      <ul class="brand-tiles" id="brand-tiles"></ul>
+    </div>
+  </section>
+
   <section class="lp-showcase hidden" id="showcase-section">
     <div class="container">
       <h2 class="lp-section-title">Events we've run</h2>
       <p class="lp-section-sub">A few of the brands and activations our promoters have worked.</p>
       <div id="showcase"></div>
-      <div class="lp-brands" id="brands"></div>
     </div>
   </section>
 
@@ -100,9 +106,11 @@
   import { fmtDate, fmtMoney, escapeHTML } from "/js/ui.js";
   import { icon } from "/js/icons.js";
   import { mountShowcase } from "/js/showcase.js";
+  import { mountBrands } from "/js/brands.js";
 
   mountLayout();
-  mountShowcase(document.getElementById("showcase"), document.getElementById("showcase-section"), { withBrands: document.getElementById("brands") });
+  mountShowcase(document.getElementById("showcase"), document.getElementById("showcase-section"));
+  mountBrands(document.getElementById("brand-tiles"));
   document.getElementById("search-icon").innerHTML = icon("search", 17);
   document.getElementById("follow-links").innerHTML = SOCIAL_LINKS.map(([name, href, iconName]) => `
     <a class="btn btn-secondary" href="${href}" target="_blank" rel="noopener noreferrer">${icon(iconName, 16)}${name}</a>`).join("");

@@ -32,11 +32,6 @@ export function showcaseHTML(items, { layout = "grid" } = {}) {
     </button>`).join("")}</div>`;
 }
 
-export function brandsHTML(items) {
-  const brands = [...new Set(items.map((i) => (i.brand || "").trim()).filter(Boolean))];
-  return brands.length ? `<ul class="brand-list">${brands.map((b) => `<li>${escapeHTML(b)}</li>`).join("")}</ul>` : "";
-}
-
 /** Opens a tapped photo full size. */
 export function bindShowcase(host, items) {
   host.addEventListener("click", (e) => {
@@ -52,12 +47,11 @@ export function bindShowcase(host, items) {
 }
 
 /** Fills host with the showcase, or hides section if there's nothing to show. */
-export async function mountShowcase(host, section, { layout = "grid", withBrands = null } = {}) {
+export async function mountShowcase(host, section, { layout = "grid" } = {}) {
   try {
     const items = await listShowcase(layout === "strip" ? 12 : 24);
     if (!items.length) return section.classList.add("hidden");
     host.innerHTML = showcaseHTML(items, { layout });
-    if (withBrands) withBrands.innerHTML = brandsHTML(items);
     bindShowcase(host, items);
     section.classList.remove("hidden");
   } catch {

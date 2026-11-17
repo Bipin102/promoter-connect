@@ -378,5 +378,18 @@ html:has(body.has-bottom-nav) { scroll-padding-bottom: 88px; }
 .lp-showcase { padding: 64px 0; border-bottom: 1px solid var(--border); }
 .lp-section-title { font-size: clamp(22px, 2.6vw, 28px); font-weight: 700; }
 .lp-section-sub { color: var(--text-dim); font-size: 15px; margin: 6px 0 24px; }
-.lp-brands { margin-top: 24px; }
-.lp-brands:not(:empty)::before { content: "Brands we've worked with"; display: block; font-size: 13px; font-weight: 600; color: var(--text-faint); margin-bottom: 10px; }
+.lp-brands-section { padding: 40px 0 48px; border-bottom: 1px solid var(--border); }
+.lp-brands-title { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); text-align: center; margin-bottom: 20px; }
+.brand-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.brand-tile {
+  height: 84px; display: flex; align-items: center; justify-content: center; padding: 14px 18px;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.brand-tile img { max-height: 48px; max-width: min(100%, 180px); width: auto; object-fit: contain; }
+.brand-name { font-weight: 700; font-size: 16px; color: #111216; text-align: center; }
+@media (max-width: 760px) {
+  .brand-tiles { grid-template-columns: repeat(2, 1fr); }
+  .brand-tile { height: 72px; }
+  .brand-tile img { max-height: 40px; max-width: min(100%, 150px); }
+  .brand-tiles li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
