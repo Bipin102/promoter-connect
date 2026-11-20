@@ -312,3 +312,15 @@ a.list-row:hover { background: var(--surface-2); }
 .company-line .pc-stars { font-size: 13px; gap: 4px; flex-shrink: 0; }
 .company-new { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
 .avatar.xs { width: 22px; height: 22px; font-size: 11px; border-radius: 6px; }
+
+/* ============ SHARE ============ */
+.share-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 14px; }
+.share-target {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px;
+  border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-dim);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.share-target:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+.share-copy { display: flex; gap: 8px; }
+.share-copy .input { flex: 1; min-width: 0; font-size: 13px; color: var(--text-dim); }
+.btn-icon { padding: 0; width: 40px; flex: 0 0 40px !important; }

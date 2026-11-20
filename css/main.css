@@ -380,16 +380,21 @@ html:has(body.has-bottom-nav) { scroll-padding-bottom: 88px; }
 .lp-section-sub { color: var(--text-dim); font-size: 15px; margin: 6px 0 24px; }
 .lp-brands-section { padding: 40px 0 48px; border-bottom: 1px solid var(--border); }
 .lp-brands-title { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); text-align: center; margin-bottom: 20px; }
-.brand-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.brand-tiles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
 .brand-tile {
-  height: 84px; display: flex; align-items: center; justify-content: center; padding: 14px 18px;
-  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  --brand: var(--border-strong);
+  position: relative; overflow: hidden; flex: 0 0 calc((100% - 3 * 14px) / 4);
+  height: 92px; display: flex; align-items: center; justify-content: center; padding: 14px 18px 18px;
+  background: #fff; border: 2px solid var(--brand); border-radius: var(--radius-lg);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
 }
+/* A strip of the brand's own colour along the bottom of each tile. */
+.brand-tile::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--brand); }
+.brand-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 30%, transparent); }
 .brand-tile img { max-height: 48px; max-width: min(100%, 180px); width: auto; object-fit: contain; }
 .brand-name { font-weight: 700; font-size: 16px; color: #111216; text-align: center; }
 @media (max-width: 760px) {
-  .brand-tiles { grid-template-columns: repeat(2, 1fr); }
-  .brand-tile { height: 72px; }
+  .brand-tiles { gap: 10px; }
+  .brand-tile { flex-basis: calc((100% - 10px) / 2); height: 76px; }
   .brand-tile img { max-height: 40px; max-width: min(100%, 150px); }
-  .brand-tiles li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }

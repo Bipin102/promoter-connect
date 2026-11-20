@@ -35,6 +35,7 @@
   import { toast, confirmDialog, escapeHTML, safeUrl, statusPill, avatarHTML, fmtCountdown, fmtTimestamp, openModal } from "/js/ui.js";
   import { icon } from "/js/icons.js";
   import { mountRatingForm } from "/js/rating-form.js";
+  import { shareEvent } from "/js/share.js";
   import { getPayout, grantPayoutAccess, payoutSummaryHTML } from "/js/payouts.js";
   import { getPromoterPhone, phoneLinkHTML } from "/js/contacts.js";
 
@@ -114,6 +115,7 @@
         ${isClosed ? "" : `
         <div class="event-actions">
           ${active.length ? `<button class="btn btn-primary" id="complete-btn">Mark event as done</button>` : ""}
+          ${e.status === "open" ? `<button class="btn btn-secondary" id="share-btn">${icon("share", 15)}Share</button>` : ""}
           <button class="btn btn-danger" id="cancel-btn">Cancel event</button>
         </div>`}
       </div>
@@ -256,6 +258,7 @@
   }
 
   function bindActions(e) {
+    document.getElementById("share-btn")?.addEventListener("click", () => shareEvent(e));
     document.getElementById("cancel-btn")?.addEventListener("click", async (ev) => {
       const confirmed = bookings.some((b) => !["cancelled", "completed"].includes(b.status));
       const ok = await confirmDialog(

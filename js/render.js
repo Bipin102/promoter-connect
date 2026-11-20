@@ -85,6 +85,7 @@ export function jobCardHTML(ev, { showActions = true } = {}) {
     </div>
     ${showActions ? `
     <div class="job-card-actions">
+      <button class="btn btn-secondary btn-icon" data-action="share" aria-label="Share this gig" title="Share">${icon("share", 16)}</button>
       <button class="btn btn-secondary" data-action="details">Details</button>
       ${ev._application
         ? `<button class="btn btn-secondary" disabled>${APPLICATION_LABELS[ev._application] || "Applied"}</button>`

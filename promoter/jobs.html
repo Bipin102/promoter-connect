@@ -67,12 +67,14 @@
   import { getSession } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
   import { getPromoter, attachCompanies } from "/js/db.js";
-  import { listOpenEvents, reconcileUrgentWindow } from "/js/events.js";
+  import { listOpenEvents, reconcileUrgentWindow, getEvent } from "/js/events.js";
   import { bookPosition, applyToEvent, promoterApplicationStatuses, BOOKING_ERRORS } from "/js/booking.js";
-  import { jobCardHTML, eventDetailsHTML, tickCountdowns } from "/js/render.js";
+  import { jobCardHTML, eventDetailsHTML, tickCountdowns, hasEnded } from "/js/render.js";
   import { toast, openModal, confirmDialog, escapeHTML, skeletonCards, fmtDate, fmtTimeRange, fmtMoney } from "/js/ui.js";
   import { missingForPromoter, listMissing } from "/js/contacts.js";
   import { distanceLabel, isReachableWithinHour } from "/js/geo.js";
+  import { shareEvent } from "/js/share.js";
+  import { icon } from "/js/icons.js";
 
   // Anyone can browse gigs; booking or applying needs a promoter account.
   const session = await getSession();
@@ -143,7 +145,8 @@
     const btn = e.target.closest("[data-action]");
     if (!btn) return;
     const event = events.find((ev) => ev.id === btn.closest(".job-card").dataset.eventId);
-    if (btn.dataset.action === "details") showDetails(event);
+    if (btn.dataset.action === "share") shareEvent(event);
+    else if (btn.dataset.action === "details") showDetails(event);
     else takeAction(btn, event);
   });
 
@@ -195,8 +198,10 @@
       <div class="mt-16">${eventDetailsHTML(event)}</div>
       <div class="pc-modal-actions">
         <button class="btn btn-secondary" data-close>Close</button>
+        <button class="btn btn-secondary" id="modal-share">${icon("share", 15)}Share</button>
         ${closed ? "" : `<button class="btn ${isUrgent ? "btn-urgent" : "btn-primary"}" id="modal-action">${isUrgent ? "Book a spot" : "Apply"}</button>`}
       </div>`);
+    modal.querySelector("#modal-share").addEventListener("click", () => { modal.close(); shareEvent(event); });
     modal.querySelector("#modal-action")?.addEventListener("click", (e) => {
       modal.close();
       const cardBtn = resultsEl.querySelector(`[data-event-id="${CSS.escape(event.id)}"] [data-action="book"], [data-event-id="${CSS.escape(event.id)}"] [data-action="apply"]`);
@@ -232,7 +237,21 @@
   ["f-type", "f-date", "f-reachable"].forEach((id) => $(id).addEventListener("change", load));
   ["f-location", "f-category", "f-payment"].forEach((id) => $(id).addEventListener("input", reload));
 
-  load();
+  // Shared links (/promoter/jobs?event=ID) open that gig straight away.
+  async function openSharedEvent() {
+    const id = params.get("event");
+    if (!id) return;
+    let event = events.find((e) => e.id === id);
+    if (!event) {
+      event = await getEvent(id).catch(() => null);
+      if (event && session) await attachCompanies([event]);
+    }
+    if (!event || event.status === "cancelled") return toast("That gig isn't available any more. Here are the ones that are open.", "info", 6000);
+    if (event.status !== "open" || hasEnded(event)) toast("This gig is no longer taking people, but you can still see the details.", "info", 6000);
+    showDetails(event);
+  }
+
+  load().then(openSharedEvent);
   setInterval(() => tickCountdowns(resultsEl), 1000);
 </script>
 </body>
