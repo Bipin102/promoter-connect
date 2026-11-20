@@ -17,6 +17,7 @@ const NAV = {
   guest: [
     ["Find gigs", "/promoter/jobs"],
     ["For companies", "/auth/signup?role=company"],
+    ["About", "/about"],
   ],
   promoter: [
     ["Dashboard", "/promoter/dashboard", "home"],
@@ -140,6 +141,7 @@ function renderFooter(host, signedIn) {
           <div class="pc-footer-links">
             <a href="/promoter/jobs">Find gigs</a>
             <a href="/auth/signup?role=company">Hire promoters</a>
+            <a href="/about">About us</a>
             <a href="/auth/login">Log in</a>
           </div>
         </div>
