@@ -46,7 +46,7 @@ function themeButtonHTML() {
 function toggleTheme() {
   const next = currentTheme() === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
-  try { localStorage.setItem("pc-theme", next); } catch {}
+  try { localStorage.setItem("pc-theme-v2", next); } catch {}
   document.getElementById("pc-theme-toggle").outerHTML = themeButtonHTML();
   document.getElementById("pc-theme-toggle").addEventListener("click", toggleTheme);
   document.querySelectorAll("[data-theme-toggle]").forEach((el) => { el.textContent = `Switch to ${next === "dark" ? "light" : "dark"} mode`; });
@@ -161,8 +161,9 @@ export function mountLayout({ role = null } = {}) {
   if (!navHost) return;
 
   const guestActions = `
-    <a href="/auth/login" class="btn btn-ghost btn-sm pc-login">Log in</a>
-    <a href="/auth/signup" class="btn btn-primary btn-sm">Sign up</a>`;
+    <a href="/auth/login" class="btn btn-ghost pc-login">Log in</a>
+    <a href="/auth/signup?role=company" class="btn btn-outline pc-hire">Hire promoters</a>
+    <a href="/auth/signup" class="btn btn-primary">Sign up free</a>`;
   const showSearch = (r) => r === "promoter" && location.pathname !== "/promoter/jobs";
   renderNav(navHost, NAV[role] || NAV.guest, role ? "" : guestActions, {
     search: showSearch(role),
