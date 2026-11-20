@@ -20,81 +20,113 @@
 <link rel="stylesheet" href="/css/components.css" />
 </head>
 <body>
-<main class="auth-shell" id="main">
-  <div class="auth-card">
-    <a href="/" class="pc-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
-    <h1 class="auth-title">Create your account</h1>
-    <p class="auth-sub">Free, and it takes a few seconds.</p>
+<main class="auth-split" id="main">
+  <aside class="auth-aside" id="auth-aside" aria-label="About Promoter Connect"></aside>
 
-    <div class="form-error" id="err" role="alert"></div>
-    <p class="invite-note hidden" id="invite-note"></p>
+  <section class="auth-main">
+    <div class="auth-topbar">
+      <a href="/" class="pc-logo auth-mobile-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
+      <p class="auth-topbar-link">Have an account? <a href="/auth/login">Log in</a></p>
+    </div>
 
-    <fieldset class="field" style="border:0;padding:0;margin:0 0 20px">
-      <legend class="field-label">I'm a</legend>
-      <div class="radio-card-group">
-        <label class="radio-card" data-role="promoter">
-          <input type="radio" name="role" value="promoter" />
-          <h4>Promoter</h4>
-          <p>Looking for event work</p>
-        </label>
-        <label class="radio-card" data-role="company">
-          <input type="radio" name="role" value="company" />
-          <h4>Company</h4>
-          <p>Hiring for events</p>
-        </label>
-      </div>
-    </fieldset>
+    <div class="auth-form-wrap">
+      <h1 class="auth-title">Create your account</h1>
+      <p class="auth-sub">Free for promoters and companies. Takes under a minute.</p>
 
-    <button type="button" class="btn btn-secondary btn-block btn-lg google-btn" id="google-btn">
-      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
-      Continue with Google
-    </button>
+      <div class="form-error" id="err" role="alert"></div>
+      <p class="invite-note hidden" id="invite-note"></p>
 
-    <div class="auth-divider"><span>or sign up with email</span></div>
-
-    <form id="signup-form" novalidate>
-      <div class="field">
-        <label for="name" id="name-label">Your name</label>
-        <input type="text" id="name" autocomplete="name" required />
-      </div>
-      <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" autocomplete="email" inputmode="email" required />
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <div class="password-wrap">
-          <input type="password" id="password" autocomplete="new-password" required minlength="6" />
-          <button type="button" class="password-toggle" id="pw-toggle" aria-label="Show password">Show</button>
+      <fieldset class="auth-step">
+        <legend class="auth-step-label">I'm joining as</legend>
+        <div class="role-cards">
+          <label class="role-card" data-role="promoter">
+            <input type="radio" name="role" value="promoter" />
+            <span class="role-card-icon" data-icon="user"></span>
+            <span class="role-card-text"><strong>Promoter</strong><span>Find event work</span></span>
+            <span class="role-card-dot" aria-hidden="true"></span>
+          </label>
+          <label class="role-card" data-role="company">
+            <input type="radio" name="role" value="company" />
+            <span class="role-card-icon" data-icon="briefcase"></span>
+            <span class="role-card-text"><strong>Company</strong><span>Hire for events</span></span>
+            <span class="role-card-dot" aria-hidden="true"></span>
+          </label>
         </div>
-        <p class="field-hint">At least 6 characters</p>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create account</button>
-    </form>
+      </fieldset>
 
-    <p class="auth-switch">Already have an account? <a href="/auth/login">Log in</a></p>
-  </div>
+      <button type="button" class="btn btn-secondary btn-block btn-lg google-btn" id="google-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-divider"><span>or with email</span></div>
+
+      <form id="signup-form" novalidate>
+        <div class="field">
+          <label for="name" id="name-label">Full name</label>
+          <input type="text" id="name" autocomplete="name" placeholder="e.g. Priya Sharma" required />
+        </div>
+        <div class="field">
+          <label for="email" id="email-label">Email</label>
+          <input type="email" id="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="password-wrap">
+            <input type="password" id="password" autocomplete="new-password" placeholder="At least 6 characters" required minlength="6" aria-describedby="pw-meter-text" />
+            <button type="button" class="password-toggle" id="pw-toggle" aria-label="Show password">Show</button>
+          </div>
+          <div class="pw-meter" id="pw-meter" data-level="0" aria-hidden="true"><span></span><span></span><span></span></div>
+          <p class="field-hint" id="pw-meter-text">Use 6 or more characters. A mix of letters and numbers is stronger.</p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create account</button>
+      </form>
+
+      <p class="auth-fine">You'll add your photo and phone number on the next step.</p>
+    </div>
+  </section>
 </main>
 
 <script type="module">
   import { signup, continueWithGoogle, authErrorMessage } from "/js/auth.js";
   import { lookupCode, normalizeCode, rememberPendingCode, pendingCode } from "/js/referrals.js";
+  import { mountAuthAside, setAuthAsideRole } from "/js/auth-aside.js";
+  import { icon } from "/js/icons.js";
 
   const $ = (id) => document.getElementById(id);
   const errBox = $("err");
   const showError = (msg) => { if (!msg) return; errBox.textContent = msg; errBox.classList.add("show"); };
   const clearError = () => errBox.classList.remove("show");
 
-  const cards = document.querySelectorAll(".radio-card");
+  const aside = $("auth-aside");
+  mountAuthAside(aside);
+  document.querySelectorAll("[data-icon]").forEach((el) => { el.innerHTML = icon(el.dataset.icon, 18); });
+
+  const cards = document.querySelectorAll(".role-card");
   function selectRole(card) {
+    const isCompany = card.dataset.role === "company";
     cards.forEach((c) => c.classList.toggle("selected", c === card));
     card.querySelector("input").checked = true;
-    $("name-label").textContent = card.dataset.role === "company" ? "Company name" : "Your name";
+    $("name-label").textContent = isCompany ? "Company name" : "Full name";
+    $("name").placeholder = isCompany ? "e.g. Bright Events Pvt Ltd" : "e.g. Priya Sharma";
+    $("name").autocomplete = isCompany ? "organization" : "name";
+    $("email-label").textContent = isCompany ? "Work email" : "Email";
+    $("email").placeholder = isCompany ? "you@company.com" : "you@example.com";
+    setAuthAsideRole(aside, card.dataset.role);
     clearError();
   }
   cards.forEach((card) => card.querySelector("input").addEventListener("change", () => selectRole(card)));
   const preset = new URLSearchParams(location.search).get("role");
-  if (preset === "promoter" || preset === "company") selectRole(document.querySelector(`.radio-card[data-role="${preset}"]`));
+  if (preset === "promoter" || preset === "company") selectRole(document.querySelector(`.role-card[data-role="${preset}"]`));
+
+  const meterText = ["Use 6 or more characters. A mix of letters and numbers is stronger.", "Weak. Add more characters or mix in numbers.", "Good password.", "Strong password."];
+  $("password").addEventListener("input", (e) => {
+    const v = e.target.value;
+    const score = (v.length >= 8) + (v.length >= 12) + /\d/.test(v) + (/[a-z]/.test(v) && /[A-Z]/.test(v)) + /[^a-z0-9]/i.test(v);
+    const level = v.length < 6 ? 1 : score >= 3 ? 3 : score >= 1 ? 2 : 1;
+    $("pw-meter").dataset.level = v ? String(level) : "0";
+    $("pw-meter-text").textContent = v ? (v.length < 6 ? `${6 - v.length} more ${6 - v.length === 1 ? "character" : "characters"} needed.` : meterText[level]) : meterText[0];
+  });
   const selectedRole = () => document.querySelector('input[name="role"]:checked')?.value;
 
   $("pw-toggle").addEventListener("click", (e) => {
