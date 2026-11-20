@@ -21,8 +21,6 @@
 </head>
 <body>
 <main class="auth-split" id="main">
-  <aside class="auth-aside" id="auth-aside" aria-label="About Promoter Connect"></aside>
-
   <section class="auth-main">
     <div class="auth-topbar">
       <a href="/" class="pc-logo auth-mobile-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
@@ -90,7 +88,6 @@
 <script type="module">
   import { signup, continueWithGoogle, authErrorMessage } from "/js/auth.js";
   import { lookupCode, normalizeCode, rememberPendingCode, pendingCode } from "/js/referrals.js";
-  import { mountAuthAside, setAuthAsideRole } from "/js/auth-aside.js";
   import { icon } from "/js/icons.js";
 
   const $ = (id) => document.getElementById(id);
@@ -98,8 +95,6 @@
   const showError = (msg) => { if (!msg) return; errBox.textContent = msg; errBox.classList.add("show"); };
   const clearError = () => errBox.classList.remove("show");
 
-  const aside = $("auth-aside");
-  mountAuthAside(aside);
   document.querySelectorAll("[data-icon]").forEach((el) => { el.innerHTML = icon(el.dataset.icon, 18); });
 
   const cards = document.querySelectorAll(".role-card");
@@ -112,7 +107,6 @@
     $("name").autocomplete = isCompany ? "organization" : "name";
     $("email-label").textContent = isCompany ? "Work email" : "Email";
     $("email").placeholder = isCompany ? "you@company.com" : "you@example.com";
-    setAuthAsideRole(aside, card.dataset.role);
     clearError();
   }
   cards.forEach((card) => card.querySelector("input").addEventListener("change", () => selectRole(card)));

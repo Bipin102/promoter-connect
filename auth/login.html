@@ -15,8 +15,6 @@
 </head>
 <body>
 <main class="auth-split" id="main">
-  <aside class="auth-aside" id="auth-aside" aria-label="About Promoter Connect"></aside>
-
   <section class="auth-main">
     <div class="auth-topbar">
       <a href="/" class="pc-logo auth-mobile-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
@@ -56,8 +54,6 @@
 <script type="module">
   import { login, resetPassword, getUserDoc, continueWithGoogle, authErrorMessage } from "/js/auth.js";
   import { toast } from "/js/ui.js";
-  import { mountAuthAside } from "/js/auth-aside.js";
-  mountAuthAside(document.getElementById("auth-aside"));
 
   const errBox = document.getElementById("err");
   const showError = (msg) => { if (!msg) return; errBox.textContent = msg; errBox.classList.add("show"); };
