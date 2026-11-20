@@ -248,7 +248,7 @@ a:focus-visible, button:focus-visible { border-radius: var(--radius-sm); }
 .auth-card .pc-logo { margin-bottom: 24px; }
 .auth-title { font-size: 22px; margin-bottom: 4px; }
 .auth-sub { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
-.auth-switch { margin-top: 20px; font-size: 14px; color: var(--text-dim); }
+.auth-switch { margin-top: 20px; font-size: 14px; color: var(--text-dim); text-align: center; }
 .auth-switch a { color: var(--accent-text); font-weight: 500; }
 .form-error {
   display: none; background: color-mix(in srgb, var(--danger) 10%, transparent);
@@ -447,12 +447,12 @@ html:has(body.has-bottom-nav) { scroll-padding-bottom: 88px; }
 }
 
 /* ============ AUTH (split layout) ============ */
-.auth-split { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--bg); }
-.auth-main { display: flex; flex-direction: column; min-width: 0; padding: 20px 16px 40px; }
+.auth-split { background: var(--bg); }
+.auth-main { min-width: 0; padding: 0 16px; }
 .auth-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .auth-topbar-link { font-size: 14px; color: var(--text-dim); margin-left: auto; }
 .auth-topbar-link a { color: var(--accent-text); font-weight: 500; }
-.auth-form-wrap { width: 100%; max-width: 400px; margin: 32px auto 0; }
+.auth-form-wrap { width: 100%; max-width: 440px; margin: 0 auto; padding: 40px 0 64px; }
 .auth-form-wrap .auth-title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
 .auth-form-wrap .auth-sub { margin-bottom: 28px; }
 .auth-form-wrap .field input { height: 44px; }
@@ -491,8 +491,8 @@ html:has(body.has-bottom-nav) { scroll-padding-bottom: 88px; }
 .pw-meter[data-level="3"] span { background: var(--success); }
 
 @media (min-width: 720px) {
-  .auth-main { padding: 28px 40px 48px; }
-  .auth-form-wrap { margin: auto; padding: 24px 0; }
+  .auth-form-wrap { padding: 72px 0 96px; }
+  .auth-form-wrap .auth-title { font-size: 34px; }
 }
 
 /* ============ ABOUT ============ */

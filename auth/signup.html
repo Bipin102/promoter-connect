@@ -20,13 +20,10 @@
 <link rel="stylesheet" href="/css/components.css" />
 </head>
 <body>
+<div id="pc-navbar"></div>
+
 <main class="auth-split" id="main">
   <section class="auth-main">
-    <div class="auth-topbar">
-      <a href="/" class="pc-logo auth-mobile-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
-      <p class="auth-topbar-link">Have an account? <a href="/auth/login">Log in</a></p>
-    </div>
-
     <div class="auth-form-wrap">
       <h1 class="auth-title">Create your account</h1>
       <p class="auth-sub">Free for promoters and companies. Takes under a minute.</p>
@@ -79,13 +76,18 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Create account</button>
       </form>
+      <p class="auth-switch">Already have an account? <a href="/auth/login">Log in</a></p>
 
       <p class="auth-fine">You'll add your photo and phone number on the next step.</p>
     </div>
   </section>
 </main>
 
+<div id="pc-footer"></div>
+
 <script type="module">
+  import { mountLayout } from "/js/layout.js";
+  mountLayout();
   import { signup, continueWithGoogle, authErrorMessage } from "/js/auth.js";
   import { lookupCode, normalizeCode, rememberPendingCode, pendingCode } from "/js/referrals.js";
   import { icon } from "/js/icons.js";

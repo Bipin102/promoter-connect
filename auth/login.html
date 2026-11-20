@@ -14,13 +14,10 @@
 <link rel="stylesheet" href="/css/components.css" />
 </head>
 <body>
+<div id="pc-navbar"></div>
+
 <main class="auth-split" id="main">
   <section class="auth-main">
-    <div class="auth-topbar">
-      <a href="/" class="pc-logo auth-mobile-logo"><img src="/assets/icon-64.png" class="pc-logo-mark" alt="" width="28" height="28" />Promoter Connect</a>
-      <p class="auth-topbar-link">New here? <a href="/auth/signup">Create an account</a></p>
-    </div>
-
     <div class="auth-form-wrap">
     <h1 class="auth-title">Welcome back</h1>
     <p class="auth-sub">Log in to see your gigs, bookings and messages.</p>
@@ -46,12 +43,17 @@
       <div class="forgot-row"><button type="button" id="forgot-btn">Forgot password?</button></div>
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">Log in</button>
     </form>
+      <p class="auth-switch">New here? <a href="/auth/signup">Create a free account</a></p>
 
     </div>
   </section>
 </main>
 
+<div id="pc-footer"></div>
+
 <script type="module">
+  import { mountLayout } from "/js/layout.js";
+  mountLayout();
   import { login, resetPassword, getUserDoc, continueWithGoogle, authErrorMessage } from "/js/auth.js";
   import { toast } from "/js/ui.js";
 
