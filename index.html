@@ -59,6 +59,13 @@
 
   <section class="lp-brands-section" aria-labelledby="brands-title">
     <div class="container">
+      <div class="partners-panel" aria-labelledby="partners-title">
+        <p class="partners-badge" id="partners-badge"></p>
+        <h2 class="partners-title" id="partners-title">Our brand partners</h2>
+        <p class="partners-sub">The agencies we team up with to run events and campaigns.</p>
+        <ul class="partner-cards" id="partner-cards"></ul>
+      </div>
+
       <h2 class="lp-brands-title" id="brands-title">Brands we've worked with</h2>
       <ul class="brand-tiles" id="brand-tiles"></ul>
     </div>
@@ -106,10 +113,12 @@
   import { fmtDate, fmtMoney, escapeHTML } from "/js/ui.js";
   import { icon } from "/js/icons.js";
   import { mountShowcase } from "/js/showcase.js";
-  import { mountBrands } from "/js/brands.js";
+  import { mountBrands, mountPartners } from "/js/brands.js";
 
   mountLayout();
   mountShowcase(document.getElementById("showcase"), document.getElementById("showcase-section"));
+  mountPartners(document.getElementById("partner-cards"));
+  document.getElementById("partners-badge").innerHTML = `${icon("star", 13)}Partners`;
   mountBrands(document.getElementById("brand-tiles"));
   document.getElementById("search-icon").innerHTML = icon("search", 17);
   document.getElementById("follow-links").innerHTML = SOCIAL_LINKS.map(([name, href, iconName]) => `
