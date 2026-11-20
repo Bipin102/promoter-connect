@@ -27,7 +27,7 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
-  import { watchEvent, reconcileUrgentWindow, cancelEvent, reopenUrgentEvent, URGENT_WINDOW_MS } from "/js/events.js";
+  import { watchEvent, reconcileUrgentWindow, cancelEvent, reopenUrgentEvent, canEditEvent, URGENT_WINDOW_MS } from "/js/events.js";
   import { watchCompanyBookingsForEvent, watchApplicationsForEvent, respondToApplication, acceptApplicationsInOrder, completeEvent } from "/js/booking.js";
   import { listCheckInsForEvent } from "/js/checkin.js";
   import { hasRated, submitRating, categoriesFor } from "/js/ratings.js";
@@ -51,6 +51,13 @@
   };
   if (params.has("posted")) {
     toast("Your event is live.", "success");
+    history.replaceState(null, "", `?id=${encodeURIComponent(eventId)}`);
+  } else if (params.has("edited")) {
+    const told = Number(params.get("edited")) || 0;
+    toast(told ? `Changes saved. ${told} ${told === 1 ? "promoter was" : "promoters were"} told.` : "Changes saved.", "success");
+    history.replaceState(null, "", `?id=${encodeURIComponent(eventId)}`);
+  } else if (params.has("unchanged")) {
+    toast("Nothing was changed.");
     history.replaceState(null, "", `?id=${encodeURIComponent(eventId)}`);
   }
 
@@ -115,6 +122,7 @@
         ${isClosed ? "" : `
         <div class="event-actions">
           ${active.length ? `<button class="btn btn-primary" id="complete-btn">Mark event as done</button>` : ""}
+          ${canEditEvent(e) ? `<a class="btn btn-secondary" href="/company/post-event?edit=${encodeURIComponent(e.id)}">${icon("edit", 15)}Edit</a>` : ""}
           ${e.status === "open" ? `<button class="btn btn-secondary" id="share-btn">${icon("share", 15)}Share</button>` : ""}
           <button class="btn btn-danger" id="cancel-btn">Cancel event</button>
         </div>`}

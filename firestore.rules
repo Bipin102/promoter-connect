@@ -130,6 +130,16 @@ service cloud.firestore {
         (data().hiringType == 'normal' || data().urgentDeadlineMs <= request.time.toMillis() + 3 * 60 * 60 * 1000);
     }
 
+    // A company editing its own post: same checks as posting, hiring type
+    // stays as posted, and never fewer spots than are already filled.
+    function validEventEdit() {
+      return data().hiringType == resource.data.hiringType &&
+        data().positionsRequired is int && data().positionsRequired >= 1 && data().positionsRequired <= 500 &&
+        data().positionsRequired >= data().get('positionsFilled', 0) &&
+        data().paymentAmount is number && data().paymentAmount >= 0 &&
+        shortText('eventName', 120) && shortText('description', 2000) && shortText('specialInstructions', 1000);
+    }
+
     // Someone other than the company may only: take a spot (with their new
     // booking in the same write), give one back (cancelling their booking in
     // the same write), or close an urgent post whose hour has run out.
@@ -161,7 +171,7 @@ service cloud.firestore {
       allow create: if (isSignedIn() && data().companyId == request.auth.uid && validNewEvent()) ||
         (isAdmin() && isDemoId(eventId));
       allow update: if isSignedIn() && (
-        (resource.data.companyId == request.auth.uid && data().companyId == resource.data.companyId &&
+        (resource.data.companyId == request.auth.uid && data().companyId == resource.data.companyId && validEventEdit() &&
           (!changedKeys().hasAny(['urgentDeadlineMs']) || data().urgentDeadlineMs <= request.time.toMillis() + 3 * 60 * 60 * 1000)) ||
         (isAdmin() && isDemoId(eventId)) ||
         fulfilmentUpdate(eventId)
@@ -193,6 +203,14 @@ service cloud.firestore {
         getAfter(docPath('events', eventId)).data.positionsFilled == event.get('positionsFilled', 0) + 1;
     }
 
+    function bookingFollowsEvent() {
+      let event = get(docPath('events', resource.data.eventId)).data;
+      return changedKeys().hasOnly(['eventName', 'brand', 'date', 'startTime', 'endTime', 'location', 'paymentAmount', 'updatedAt']) &&
+        data().eventName == event.eventName && data().get('brand', '') == event.get('brand', '') &&
+        data().date == event.date && data().startTime == event.startTime && data().endTime == event.endTime &&
+        data().location == event.location && data().paymentAmount == event.paymentAmount;
+    }
+
     match /bookings/{bookingId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() &&
@@ -215,7 +233,9 @@ service cloud.firestore {
           data().status in ['on_the_way', 'checked_in', 'cancelled'] &&
           resource.data.status in ['booked', 'on_the_way', 'checked_in']) ||
         (resource.data.companyId == request.auth.uid &&
-          changedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']))
+          changedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt'])) ||
+        // After the company edits its event, its bookings take the new details.
+        (resource.data.companyId == request.auth.uid && bookingFollowsEvent())
       );
     }
 

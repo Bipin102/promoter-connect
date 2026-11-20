@@ -76,6 +76,72 @@ export async function getEvent(eventId) {
   return s.exists() ? { id: s.id, ...s.data() } : null;
 }
 
+/** Fields a company can change after posting. Hiring type stays as posted. */
+const EDITABLE = ["eventName", "brand", "category", "date", "startTime", "endTime", "location", "locationGeo",
+  "positionsRequired", "genderReq", "ageReq", "experienceReq", "skillsReq", "dressCode", "description",
+  "paymentAmount", "paymentType", "specialInstructions", "contactPerson"];
+/** What a booking copies from its event, so a promoter's booking shows the new details. */
+const BOOKING_COPY = ["eventName", "brand", "date", "startTime", "endTime", "location", "paymentAmount"];
+/** Changes promoters should hear about. */
+const NOTEWORTHY = { date: "date", startTime: "time", endTime: "time", location: "venue", paymentAmount: "pay", paymentType: "pay", eventName: "name" };
+
+export function canEditEvent(event) {
+  return ["open", "fulfilled", "window_ended"].includes(event.status) && !hasEnded(event);
+}
+
+/**
+ * Saves a company's edits. Keeps the filled count, reopens a full gig that
+ * gained spots (or closes one that now has none left), brings every active
+ * booking in line, and tells booked and waiting promoters what changed.
+ * Returns how many promoters were told.
+ */
+export async function updateEvent(event, data) {
+  const changes = {};
+  for (const key of EDITABLE) {
+    let value = data[key];
+    if (value === undefined) continue;
+    if (key === "positionsRequired") value = Number(value) || 1;
+    if (key === "paymentAmount") value = Number(value) || 0;
+    if (JSON.stringify(value ?? null) !== JSON.stringify(event[key] ?? null)) changes[key] = value;
+  }
+  if (!Object.keys(changes).length) return { changed: false, notified: 0 };
+
+  const filled = event.positionsFilled || 0;
+  const required = changes.positionsRequired ?? event.positionsRequired;
+  if (required < filled) throw new Error("BELOW_FILLED");
+  if (event.status === "fulfilled" && required > filled) { changes.status = "open"; changes.fulfilledAt = null; }
+  if (event.status === "open" && required === filled) { changes.status = "fulfilled"; changes.fulfilledAt = serverTimestamp(); }
+
+  await updateDoc(doc(db, "events", event.id), { ...changes, updatedAt: serverTimestamp() });
+  const after = { ...event, ...changes };
+
+  const bookingChanges = Object.fromEntries(BOOKING_COPY.filter((k) => k in changes).map((k) => [k, after[k] ?? ""]));
+  const [bookingSnap, appSnap] = await Promise.all([
+    getDocs(query(collection(db, "bookings"), where("eventId", "==", event.id), where("companyId", "==", event.companyId))),
+    getDocs(query(collection(db, "applications"), where("eventId", "==", event.id))),
+  ]);
+  const active = bookingSnap.docs.filter((d) => ["booked", "on_the_way", "checked_in"].includes(d.data().status));
+  if (Object.keys(bookingChanges).length) {
+    await Promise.all(active.map((d) => updateDoc(d.ref, { ...bookingChanges, updatedAt: serverTimestamp() }).catch(() => {})));
+  }
+
+  const what = [...new Set(Object.keys(changes).map((k) => NOTEWORTHY[k]).filter(Boolean))];
+  if (!what.length) return { changed: true, notified: 0 };
+  const list = what.length > 1 ? `${what.slice(0, -1).join(", ")} and ${what.at(-1)}` : what[0];
+  const date = new Date(`${after.date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const summary = `${after.location} · ${date} · ₹${Number(after.paymentAmount || 0).toLocaleString("en-IN")}`;
+  const waiting = appSnap.docs.filter((d) => d.data().status === "pending").map((d) => [d.data().promoterId, `/promoter/jobs?event=${event.id}`]);
+  const booked = active.map((d) => [d.data().promoterId, "/promoter/bookings"]);
+  const people = new Map([...waiting, ...booked]);
+  await Promise.all([...people].map(([userId, link]) => pushNotification(userId, {
+    type: "event_updated",
+    title: `${after.eventName.slice(0, 90)}: ${list} changed`,
+    message: `Now: ${summary}`.slice(0, 500),
+    link,
+  }).catch(() => {})));
+  return { changed: true, notified: people.size };
+}
+
 export async function reopenUrgentEvent(eventId) {
   await updateDoc(doc(db, "events", eventId), { status: "open", urgentDeadlineMs: Date.now() + URGENT_WINDOW_MS, updatedAt: serverTimestamp() });
 }

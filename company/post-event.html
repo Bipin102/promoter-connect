@@ -20,8 +20,8 @@
 <main class="page-shell narrow" id="main">
   <div class="page-header">
     <div>
-      <h1>Post an event</h1>
-      <p>Promoters see this as soon as you post it.</p>
+      <h1 id="page-title">Post an event</h1>
+      <p id="page-sub">Promoters see this as soon as you post it.</p>
     </div>
   </div>
 
@@ -31,7 +31,7 @@
   </div>
 
   <form id="event-form" novalidate>
-    <div class="card mb-24">
+    <div class="card mb-24" id="hiring-card">
       <fieldset style="border:0;padding:0;margin:0">
         <legend class="card-title">How do you want to hire?</legend>
         <div class="radio-card-group">
@@ -64,7 +64,7 @@
       </div>
       <div class="field-row">
         <div class="field"><label for="date">Date</label><input type="date" id="date" required /></div>
-        <div class="field"><label for="positionsRequired">Promoters needed</label><input type="number" id="positionsRequired" min="1" value="1" inputmode="numeric" required /></div>
+        <div class="field"><label for="positionsRequired">Promoters needed</label><input type="number" id="positionsRequired" min="1" value="1" inputmode="numeric" required /><p class="field-hint hidden" id="filled-hint"></p></div>
       </div>
       <div class="field-row">
         <div class="field"><label for="startTime">Start time</label><input type="time" id="startTime" required /></div>
@@ -106,7 +106,7 @@
 <script type="module">
   import { requireAuth } from "/js/auth.js";
   import { mountLayout } from "/js/layout.js";
-  import { postEvent } from "/js/events.js";
+  import { postEvent, getEvent, updateEvent, canEditEvent } from "/js/events.js";
   import { getCompany } from "/js/db.js";
   import { missingForCompany, listMissing } from "/js/contacts.js";
   import { toast } from "/js/ui.js";
@@ -114,7 +114,14 @@
 
   mountLayout({ role: "company" });
   const { user } = await requireAuth("company");
-  const missing = missingForCompany(await getCompany(user.uid) || {});
+  const editId = new URLSearchParams(location.search).get("edit");
+  const editing = editId ? await getEvent(editId).catch(() => null) : null;
+  if (editId && (!editing || editing.companyId !== user.uid || !canEditEvent(editing))) {
+    toast(editing && editing.companyId === user.uid ? "This event can't be edited any more." : "Event not found.", "error");
+    location.replace(editing && editing.companyId === user.uid ? `/company/event?id=${encodeURIComponent(editId)}` : "/company/manage-events");
+    await new Promise(() => {});
+  }
+  const missing = editing ? [] : missingForCompany(await getCompany(user.uid) || {});
   if (missing.length) {
     document.getElementById("profile-needed-text").textContent = `Add ${listMissing(missing)} so promoters know who they're working for. Then you can post.`;
     document.getElementById("profile-needed").classList.remove("hidden");
@@ -124,7 +131,7 @@
 
   $("date").min = new Date().toLocaleDateString("en-CA");
 
-  let locationGeo = null;
+  let locationGeo = editing?.locationGeo || null;
   $("use-location-btn").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     const status = $("location-geo-status");
@@ -151,7 +158,31 @@
     submitBtn.textContent = hiringType === "urgent" ? "Post and start the hour" : "Post event";
   }
   document.querySelectorAll(".radio-card").forEach((card) => card.querySelector("input").addEventListener("change", () => selectType(card)));
-  selectType(document.querySelector(`.radio-card[data-type="${location.hash === "#urgent" ? "urgent" : "normal"}"]`));
+  selectType(document.querySelector(`.radio-card[data-type="${editing ? editing.hiringType : location.hash === "#urgent" ? "urgent" : "normal"}"]`));
+
+  if (editing) {
+    document.title = "Edit event · Promoter Connect";
+    $("page-title").textContent = "Edit event";
+    $("page-sub").textContent = "Booked promoters and anyone who has applied are told if the date, time, venue or pay changes.";
+    $("hiring-card").classList.add("hidden");
+    for (const key of ["eventName", "brand", "category", "location", "date", "startTime", "endTime", "positionsRequired", "paymentAmount", "paymentType",
+      "genderReq", "ageReq", "experienceReq", "dressCode", "description", "specialInstructions", "contactPerson"]) {
+      if (editing[key] !== undefined && editing[key] !== null) $(key).value = editing[key];
+    }
+    $("skillsReq").value = (editing.skillsReq || []).join(", ");
+    if (editing.date && editing.date < $("date").min) $("date").min = editing.date;
+    const filled = editing.positionsFilled || 0;
+    if (filled) {
+      $("positionsRequired").min = filled;
+      $("filled-hint").textContent = `${filled} ${filled === 1 ? "promoter is" : "promoters are"} already confirmed, so you need at least ${filled}.`;
+      $("filled-hint").classList.remove("hidden");
+    }
+    if (locationGeo) {
+      $("location-geo-status").textContent = "Venue location saved. Use the button again only if the venue moved.";
+    }
+    submitBtn.className = "btn btn-lg btn-block btn-primary";
+    submitBtn.textContent = "Save changes";
+  }
 
   function validate(data) {
     if (!data.eventName) return "Give the event a name.";
@@ -160,6 +191,8 @@
     if (!data.startTime || !data.endTime) return "Add a start and end time.";
     if (!(Number(data.positionsRequired) >= 1)) return "You need at least one promoter.";
     if (data.paymentAmount === "" || Number(data.paymentAmount) < 0) return "Add how much you're paying.";
+    if (data.startTime && data.endTime && data.startTime === data.endTime) return "The start and end time can't be the same.";
+    if (editing && Number(data.positionsRequired) < (editing.positionsFilled || 0)) return `${editing.positionsFilled} promoters are already confirmed, so you need at least ${editing.positionsFilled}.`;
     return null;
   }
 
@@ -198,6 +231,17 @@
     }
 
     const label = submitBtn.textContent;
+    if (editing) {
+      submitBtn.disabled = true; submitBtn.textContent = "Saving…";
+      try {
+        const { changed, notified } = await updateEvent(editing, data);
+        location.href = `/company/event?id=${encodeURIComponent(editing.id)}&${changed ? `edited=${notified}` : "unchanged=1"}`;
+      } catch (err) {
+        toast(err.message === "BELOW_FILLED" ? "More promoters are confirmed than that. Reload and try again." : "Couldn't save your changes. Please try again.", "error");
+        submitBtn.disabled = false; submitBtn.textContent = label;
+      }
+      return;
+    }
     submitBtn.disabled = true; submitBtn.textContent = "Posting…";
     try {
       const eventId = await postEvent(user.uid, data);
