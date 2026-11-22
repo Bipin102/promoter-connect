@@ -38,6 +38,23 @@ export async function shrinkImage(file, maxSize = 1600) {
   }
 }
 
+/**
+ * Turns a failed upload into something a person can act on. The common case is
+ * image storage being unreachable (for example, the free Supabase project
+ * pausing after a quiet week), which is on our side, not theirs.
+ */
+function uploadErrorMessage(error) {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return "You're offline. Check your internet connection and try again.";
+  }
+  const status = Number(error?.statusCode ?? error?.status ?? error?.originalError?.status) || 0;
+  if (status === 413) return "That image is too large. Please pick a smaller one.";
+  if (!status || status >= 500) {
+    return "Photo uploads are temporarily unavailable. This is a problem on our side, not yours. Please try again in a few minutes.";
+  }
+  return "The upload didn't go through. Please try again.";
+}
+
 /** Uploads an image to Supabase Storage and returns its public URL. */
 export async function uploadImage(path, file, { maxSize = 1600 } = {}) {
   if (!file) throw new Error("No file provided");
@@ -49,8 +66,8 @@ export async function uploadImage(path, file, { maxSize = 1600 } = {}) {
   const { error } = await supabase.storage.from(supabaseConfig.bucket).upload(path, upload, {
     upsert: false,
     contentType: upload.type || file.type,
-  });
-  if (error) throw new Error("The upload didn't go through. Please try again.");
+  }).catch((err) => ({ error: err }));
+  if (error) throw new Error(uploadErrorMessage(error));
 
   const { data } = supabase.storage.from(supabaseConfig.bucket).getPublicUrl(path);
   return data.publicUrl;
